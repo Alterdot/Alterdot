@@ -173,7 +173,7 @@ void MasternodeList::StartAlias(std::string strAlias)
 
             int nDoS;
             if (fSuccess && !mnodeman.CheckMnbAndUpdateMasternodeList(NULL, mnb, nDoS, *g_connman)) {
-                strError = "Failed to verify MNB";
+                strError = "Failed to verify MNB - MN collateral transaction needs 15 confirmations";
                 fSuccess = false;
             }
 

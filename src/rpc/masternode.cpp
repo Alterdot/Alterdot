@@ -389,7 +389,7 @@ UniValue masternode_start_alias(const JSONRPCRequest& request)
 
             int nDoS;
             if (fResult && !mnodeman.CheckMnbAndUpdateMasternodeList(NULL, mnb, nDoS, *g_connman)) {
-                strError = "Failed to verify MNB";
+                strError = "Failed to verify MNB - MN collateral transaction needs 15 confirmations";
                 fResult = false;
             }
 
