@@ -1,6 +1,7 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
 // Copyright (c) 2014-2019 The Dash Core developers
+// Copyright (c) 2021 Alterdot developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
@@ -1882,6 +1883,7 @@ static DisconnectResult DisconnectBlock(const CBlock& block, CValidationState& s
     // make sure the flag is reset in case of a chain reorg
     // (we reused the DIP3 deployment)
     instantsend.isAutoLockBip9Active = pindex->nHeight >= Params().GetConsensus().DIP0003Height;
+    instantsend.isChangeActive = pindex->nHeight >= Params().GetConsensus().DIP0008Height;
 
     evoDb->WriteBestBlock(pindex->pprev->GetBlockHash());
 
@@ -3839,7 +3841,17 @@ void ReindexBdnsRecords() {
 
     fReindexingBdns = true;
 
-    pbdnsdb->CleanDatabase();
+    {
+        LOCK(cs_main);
+        // if the initial database cleanup fails then we stop reindexing and the corruption flag gets set to true
+        if (!pbdnsdb->CleanDatabase()) {
+            fReindexingBdns = false;
+            pbdnsdb->WriteReindexing(false);
+            pbdnsdb->WriteCorruptionState(true);
+            return;
+        } else
+            LogPrint("bdns", "BlockchainDNS -- %s: database cleanup successful\n", __func__);
+    }
 
     const Consensus::Params& consensusParams = Params().GetConsensus();
     CBlockIndex* lastProcessedIndex;
@@ -3849,8 +3861,7 @@ void ReindexBdnsRecords() {
         LOCK(cs_main);
         if (chainActive.Height() < consensusParams.nHardForkEight) {
             fReindexingBdns = false;
-            if (!pbdnsdb->WriteReindexing(false))
-                LogPrintf("BlockchainDNS -- %s: failed to write reindexing state\n", __func__);
+            pbdnsdb->WriteReindexing(false);
             return;
         } else {
             lastProcessedIndex = chainActive.Tip()->pprev->pprev;
@@ -3864,8 +3875,7 @@ void ReindexBdnsRecords() {
 
         if (!ProcessBdnsActiveHeight(i, consensusParams)) {
             fReindexingBdns = false;
-            if (!pbdnsdb->WriteReindexing(false))
-                LogPrintf("BlockchainDNS -- %s: failed to write reindexing state\n", __func__);
+            pbdnsdb->WriteReindexing(false);
             return;
         }
     }
@@ -3878,16 +3888,14 @@ void ReindexBdnsRecords() {
             for (int i = lastProcessedHeight; i <= chainActive.Height(); i++)
                 if (!ProcessBdnsActiveHeight(i, consensusParams)) {
                     fReindexingBdns = false;
-                    if (!pbdnsdb->WriteReindexing(false))
-                        LogPrintf("BlockchainDNS -- %s: failed to write reindexing state\n", __func__);
+                    pbdnsdb->WriteReindexing(false);
                     return;
                 }
         } else
             pbdnsdb->WriteCorruptionState(true);
 
         fReindexingBdns = false;
-        if (!pbdnsdb->WriteReindexing(false))
-            LogPrintf("BlockchainDNS -- %s: failed to write reindexing state\n", __func__);
+        pbdnsdb->WriteReindexing(false);
     }
 }
 

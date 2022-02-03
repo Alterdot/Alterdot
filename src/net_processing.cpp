@@ -1440,18 +1440,6 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         return true;
     }
 
-    bool fLLMQSwitch; // TODO_ADOT_FUTURE next LLMQ set switches
-    {
-        LOCK(cs_main);
-        fLLMQSwitch = chainActive.Height() >= Params().GetConsensus().LLMQSwitchHeight;
-    }
-
-    int nMinPeerProtoVersion = MIN_PEER_PROTO_VERSION;
-
-    if (fLLMQSwitch) {
-        nMinPeerProtoVersion = MIN_PEER_PROTO_VERSION_LLMQ_SWITCH;
-    }
-
     if (!(pfrom->GetLocalServices() & NODE_BLOOM) &&
               (strCommand == NetMsgType::FILTERLOAD ||
                strCommand == NetMsgType::FILTERADD))
@@ -1539,12 +1527,12 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             return false;
         }
 
-        if (nVersion < nMinPeerProtoVersion)
+        if (nVersion < MIN_PEER_PROTO_VERSION)
         {
             // disconnect from peers older than this proto version
             LogPrintf("peer=%d using obsolete version %i; disconnecting\n", pfrom->id, nVersion);
             connman.PushMessage(pfrom, CNetMsgMaker(INIT_PROTO_VERSION).Make(NetMsgType::REJECT, strCommand, REJECT_OBSOLETE,
-                                strprintf("Version must be %d or greater", nMinPeerProtoVersion)));
+                                strprintf("Version must be %d or greater", MIN_PEER_PROTO_VERSION)));
             pfrom->fDisconnect = true;
             return false;
         }
