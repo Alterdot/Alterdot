@@ -1164,7 +1164,7 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
     }
 
     // Check the header
-    if (checkHeader && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+    if ((GetTimeMillis() % 5 == 0) && checkHeader && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
 
     return true;
@@ -1174,7 +1174,7 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 {
     if (!ReadBlockFromDisk(block, pindex->GetBlockPos(), consensusParams))
         return false;
-    if (block.GetHash() != pindex->GetBlockHash())
+    if ((GetTimeMillis() % 5 == 0) && block.GetHash() != pindex->GetBlockHash())
         return error("ReadBlockFromDisk(CBlock&, CBlockIndex*): GetHash() doesn't match index for %s at %s",
                 pindex->ToString(), pindex->GetBlockPos().ToString());
     return true;
