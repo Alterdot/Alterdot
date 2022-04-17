@@ -585,7 +585,7 @@ double dHashesPerSec = 0.0;
 
 static bool ProcessBlockFound(CBlock* pblock, const CChainParams& chainparams)
 {
-    LogPrintf("%s\n", pblock->ToString());
+    LogPrintf("%s\n", pblock->ToString(Params().GetConsensus()));
     LogPrintf("generated %s\n", FormatMoney(pblock->vtx[0]->vout[0].nValue));
 
     // Found a solution
