@@ -1,4 +1,4 @@
-# **Alterdot (ADOT) v1.9.2.1**
+# **Alterdot (ADOT) v1.9.3.0**
 
 <table>
  <tr>
@@ -31,6 +31,8 @@
 **Copyright (c) 2017-2022 Alterdot developers**
 
 **Project previously known as [Bitcreds](https://github.com/Bitcreds/Bitcreds).**
+
+**Note for v1.9.3**: This version of Alterdot freezes rewards at current levels (4 to PoW, 4 to MNs, and 2 to DevFund). The purpose of this change is keeping rewards attractive until Alternodes come to life as they represent a major milestone in our development process. Once that happens, a different reward allocation will be set in place to accomodate the new dynamics of our ecosystem. A hard fork will take place at block 1,131,400, diverging from the old reward structure.
 
 What is Alterdot?
 ----------------
@@ -90,9 +92,9 @@ Magic Bytes = 0x1f 0x22 0x05 0x2f
  2020 |    875,001 - 1,000,000  |  4 ADOT |    6 ADOT    |      0.5 ADOT    |     10.5 ADOT     |
  2021 |  1,000,001 - 1,043,800  |  6 ADOT |    6 ADOT    |      2 ADOT      |     14 ADOT       |
  2021 |  1,043,801 - 1,087,600  |  5 ADOT |    5 ADOT    |      2 ADOT      |     12 ADOT       |
- 2022 |  1,087,601 - 1,131,400  |  4 ADOT |    4 ADOT    |      2 ADOT      |     10 ADOT       |
- 2022 |  1,131,401 - 1,175,200  |  3 ADOT |    3 ADOT    |      2 ADOT      |      8 ADOT       |
- 2023 |  1,175,201 - ∞          |  2 ADOT |    2 ADOT    |      2 ADOT      |      6 ADOT       |
+ 2022 |  1,087,601 - ∞*         |  4 ADOT |    4 ADOT    |      2 ADOT      |     10 ADOT       |
+
+\* effectively lasting until Alternodes go live on our mainnet (more information will come with future updates)
 
 UNIX BUILD NOTES
 ====================

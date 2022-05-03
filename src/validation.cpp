@@ -1227,23 +1227,19 @@ CAmount GetPoWBlockPayment(const int& nHeight, CAmount nFees) {
             case 4: nIntPoWReward = 4 * COIN;
         }
     }
-    else if (nHeight > consensusParams.nHardForkSix && nHeight < consensusParams.nHardForkSix + 2 * consensusParams.nBlocksPerYear) {
+    else if (nHeight > consensusParams.nHardForkSix && nHeight < consensusParams.nHardForkSix + consensusParams.nBlocksPerYear) {
         int nIntPhase = (nHeight - consensusParams.nHardForkSix) / (consensusParams.nBlocksPerYear / 2);
 
         switch (nIntPhase) {
             case 0: nIntPoWReward = 6 * COIN;
                     break;
             case 1: nIntPoWReward = 5 * COIN;
-                    break;
-            case 2: nIntPoWReward = 4 * COIN;
-                    break;
-            case 3: nIntPoWReward = 3 * COIN;
         }
     }
     else
-        nIntPoWReward = 2 * COIN;
+        nIntPoWReward = 4 * COIN;
 
-    LogPrint("creation", "GetPoWBlockPayment(): create=%s PoW Reward=%d\n", FormatMoney(nIntPoWReward), nIntPoWReward);
+    LogPrint("creation", "GetPoWBlockPayment(): create=%s Total PoW Reward=%d (with fees)\n", FormatMoney(nIntPoWReward), nIntPoWReward + nFees);
     return nIntPoWReward + nFees;
 }
 
@@ -1268,21 +1264,17 @@ CAmount GetMasternodePayment(const int& nHeight) {
             case 4: nIntMNReward = 6 * COIN;
         }
     }
-    else if (nHeight > consensusParams.nHardForkSix && nHeight < consensusParams.nHardForkSix + 2 * consensusParams.nBlocksPerYear) {
+    else if (nHeight > consensusParams.nHardForkSix && nHeight < consensusParams.nHardForkSix + consensusParams.nBlocksPerYear) {
         int nIntPhase = (nHeight - consensusParams.nHardForkSix) / (consensusParams.nBlocksPerYear / 2);
 
         switch (nIntPhase) {
             case 0: nIntMNReward = 6 * COIN;
                     break;
             case 1: nIntMNReward = 5 * COIN;
-                    break;
-            case 2: nIntMNReward = 4 * COIN;
-                    break;
-            case 3: nIntMNReward = 3 * COIN;
         }
     }
     else
-        nIntMNReward = 2 * COIN;
+        nIntMNReward = 4 * COIN;
 
     if (nHeight >= consensusParams.nHardForkSeven && nHeight < consensusParams.nHardForkEight) // transition period, core functionalities only
         nIntMNReward = 0 * COIN;
