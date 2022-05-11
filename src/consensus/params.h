@@ -221,7 +221,7 @@ struct Params {
 
     int multiAlgoFork;
     int nAveragingIntervalLength;
-    int nAveragingIntervalLengthBeforeMultiChain;
+    int nAveragingIntervalLengthBeforeMultiMiningAlgo;
 
     int64_t GetCurrentPowTargetSpacing(const int& nHeight) const {
         if (nHeight > nHardForkSix)
@@ -234,7 +234,7 @@ struct Params {
         if(nHeight >= multiAlgoFork) {
             return nAveragingIntervalLength;
         } else {
-            return nAveragingIntervalLengthBeforeMultiChain;
+            return nAveragingIntervalLengthBeforeMultiMiningAlgo;
         }
     }
 };

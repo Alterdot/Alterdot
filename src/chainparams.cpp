@@ -264,7 +264,7 @@ public:
         consensus.nHardForkEight = 1037000; // block Alterdot-rebase in effect, Bitcreds rejected
 
         // For T=600, 300, 150 use approximately nAveragingIntervalLength=60, 90, 120
-        consensus.nAveragingIntervalLengthBeforeMultiChain = 80;
+        consensus.nAveragingIntervalLengthBeforeMultiMiningAlgo = 80;
         consensus.nAveragingIntervalLength = 50;
 
         consensus.nTempDevFundIncreaseEnd = 625000; // block
