@@ -33,6 +33,20 @@ int CBlockHeader::GetAlgo() const
     return ALGO_UNKNOWN;
 }
 
+std::string GetAlgoName(int Algo)
+{
+    switch (Algo)
+    {
+        case ALGO_ARGON2D:
+            return {"argon2d"};
+        case ALGO_RANDOMX:
+            return {"randomX"};
+        default:
+            return {"unknown"};
+    }
+}
+
+
 uint256 CBlockHeader::GetPoWAlgoHash(const Consensus::Params& params) const
 {
     switch (GetAlgo())
