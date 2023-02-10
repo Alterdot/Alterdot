@@ -173,8 +173,9 @@ UniValue quorum_dkgstatus(const JSONRPCRequest& request)
     LOCK(cs_main);
     int nHeight = chainActive.Height() + 1;
 
-    bool fLLMQSwitch = nHeight >= Params().GetConsensus().LLMQSwitchHeight;
     bool fDIP0008Active_context = nHeight >= Params().GetConsensus().DIP0008Height;
+    bool fLLMQSwitch = nHeight >= Params().GetConsensus().LLMQSwitchHeight;
+    bool fLLMQ_40_55Enabled = pindex->nHeight >= Params().GetConsensus().LLMQ_40_55StartHeight;
 
     std::vector<Consensus::LLMQType> usedLLMQs;
 
@@ -185,6 +186,10 @@ UniValue quorum_dkgstatus(const JSONRPCRequest& request)
         
         if (fDIP0008Active_context) {
             usedLLMQs.insert(usedLLMQs.end(), { Consensus::LLMQ_30_80 });
+        }
+
+        if (fLLMQ_40_55Enabled) {
+            usedLLMQs.insert(usedLLMQs.end(), { Consensus::LLMQ_40_55 });
         }
     }
 
