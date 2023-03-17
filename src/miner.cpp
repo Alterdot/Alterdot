@@ -154,7 +154,7 @@ std::unique_ptr<CBlockTemplate> BlockAssembler::CreateNewBlock(const CScript& sc
     bool fDIP0003Active_context = nHeight >= chainparams.GetConsensus().DIP0003Height;
     bool fDIP0008Active_context = nHeight >= chainparams.GetConsensus().DIP0008Height;
     bool fLLMQSwitch = nHeight >= chainparams.GetConsensus().LLMQSwitchHeight;
-    bool fLLMQ_40_55Enabled = pindex->nHeight >= Params().GetConsensus().LLMQ_40_55StartHeight;
+    bool fLLMQ_40_55Enabled = nHeight >= Params().GetConsensus().LLMQ_40_55StartHeight;
 
     pblock->nVersion = ComputeBlockVersion(pindexPrev, chainparams.GetConsensus(), chainparams.BIP9CheckMasternodesUpgraded());
     // -regtest only: allow overriding block.nVersion with

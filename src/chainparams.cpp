@@ -299,7 +299,7 @@ public:
         consensus.DIP0008EnforcementHeight = 1078200; // enforcement of ChainLocks
         //consensus.DIP0008EnforcementHash = uint256S("000000000000002d1734087b4c5afc3133e4e1c3e1a89218f62bcd9bb3d17f81"); // TODO_ADOT_LOW
         
-        consensus.LLMQ_40_55StartHeight = 1186000;
+        consensus.LLMQ_40_55StartHeight = 1200000;
 
         //consensus.nPowTargetTimespan = 24 * 60 * 60; // Alterdot: 1 day, not used in Alterdot
         consensus.nDifficultyAdjustmentInterval = 576; // biggest time frame used by the DELTA retargeting algo, we switched to LWMA but this is used for older blocks
@@ -400,7 +400,8 @@ public:
         consensus.llmqs[Consensus::LLMQ_10_60] = llmq10_60;
         consensus.llmqs[Consensus::LLMQ_40_55] = llmq40_55;
         consensus.llmqs[Consensus::LLMQ_30_80] = llmq30_80;
-        
+
+        consensus.llmqTypesUsed = { Consensus::LLMQ_10_60, Consensus::LLMQ_40_55, Consensus::LLMQ_30_80 };
         consensus.llmqChainLocks = Consensus::LLMQ_30_80;
         consensus.llmqForInstantSend = Consensus::LLMQ_10_60;
 
@@ -436,7 +437,7 @@ public:
             ( 1001000, uint256S("0x0000048d4c8d0a5d15984aff57b27a67499457d27d6bef47199ace612643eb29"))
             ( 1042000, uint256S("0x000008552f7ecb43e963b811e86bfec4636ac1aafb43b9dd4ae9b4e39a42d037"))
             ( 1062000, uint256S("0x000007899bd1c7c36b7b93b90969b826a255d87943c014847d3ef2e0094916c6"))
-            ( 1175200, uint256S("0x00000088a7d5158f45696ddfabb45b50fd16d25cc1798e5523a9c16cc998493f"))
+            ( 1186000, uint256S("0x0000007146e533db55325bc44cbd41fef1747c69790f8ffdc61ad9a1542d799e"))
         };
 
         chainTxData = ChainTxData {
