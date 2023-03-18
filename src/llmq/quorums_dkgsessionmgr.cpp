@@ -48,7 +48,7 @@ void CDKGSessionManager::StartMessageHandlerPool()
     for (const auto& llmqType : consensusParams.llmqTypesUsed) {
         dkgSessionHandlers.emplace(std::piecewise_construct,
                 std::forward_as_tuple(llmqType),
-                std::forward_as_tuple(consensusParams.llmqs[llmqType]), messageHandlerPool, blsWorker, *this));
+                std::forward_as_tuple(consensusParams.llmqs.at(llmqType), messageHandlerPool, blsWorker, *this));
     }
 
     messageHandlerPool.resize(2);

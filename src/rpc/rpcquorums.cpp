@@ -175,7 +175,7 @@ UniValue quorum_dkgstatus(const JSONRPCRequest& request)
 
     bool fDIP0008Active_context = nHeight >= Params().GetConsensus().DIP0008Height;
     bool fLLMQSwitch = nHeight >= Params().GetConsensus().LLMQSwitchHeight;
-    bool fLLMQ_40_55Enabled = pindex->nHeight >= Params().GetConsensus().LLMQ_40_55StartHeight;
+    bool fLLMQ_40_55Enabled = nHeight >= Params().GetConsensus().LLMQ_40_55StartHeight;
 
     std::vector<Consensus::LLMQType> usedLLMQs;
 
