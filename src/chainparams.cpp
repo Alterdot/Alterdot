@@ -350,10 +350,10 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_DIP0008].nThreshold = 3226; // 80% of 4032
 
         // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000f83beed5a351"); // 1062000
+        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000fb935a3c113c"); // 1186000
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x000007899bd1c7c36b7b93b90969b826a255d87943c014847d3ef2e0094916c6"); // 1062000
+        consensus.defaultAssumeValid = uint256S("0x0000007146e533db55325bc44cbd41fef1747c69790f8ffdc61ad9a1542d799e"); // 1186000
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -441,8 +441,8 @@ public:
         };
 
         chainTxData = ChainTxData {
-            1634304192,  //  * UNIX timestamp of last checkpoint block (1063452)
-            1453403,    //  * total number of transactions between genesis and last checkpoint (the tx=... number in the UpdateTip debug.log lines)
+            1679074451,  //  * UNIX timestamp of last checkpoint block (1063452)
+            1687260,    //  * total number of transactions between genesis and last checkpoint (the tx=... number in the UpdateTip debug.log lines)
             400        //  * estimated number of transactions per day after checkpoint
         };
 
