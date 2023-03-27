@@ -43,10 +43,12 @@ bool CDKGSessionManager::IsDIP6Enforced(int nHeight) const {
 
 void CDKGSessionManager::StartMessageHandlerPool()
 {
-    for (const auto& qt : Params().GetConsensus().llmqs) {
+    const auto& consensusParams = Params().GetConsensus();
+
+    for (const auto& llmqType : consensusParams.llmqTypesUsed) {
         dkgSessionHandlers.emplace(std::piecewise_construct,
-                std::forward_as_tuple(qt.first),
-                std::forward_as_tuple(qt.second, messageHandlerPool, blsWorker, *this));
+                std::forward_as_tuple(llmqType),
+                std::forward_as_tuple(consensusParams.llmqs.at(llmqType), messageHandlerPool, blsWorker, *this));
     }
 
     messageHandlerPool.resize(2);

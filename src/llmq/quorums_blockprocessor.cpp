@@ -123,6 +123,7 @@ bool CQuorumBlockProcessor::ProcessBlock(const CBlock& block, const CBlockIndex*
     bool fDIP0003Active_context = pindex->nHeight >= Params().GetConsensus().DIP0003Height;
     bool fDIP0008Active_context = pindex->nHeight >= Params().GetConsensus().DIP0008Height;
     bool fLLMQSwitch = pindex->nHeight >= Params().GetConsensus().LLMQSwitchHeight;
+    bool fLLMQ_40_55Enabled = pindex->nHeight >= Params().GetConsensus().LLMQ_40_55StartHeight;
 
     if (!fDIP0003Active_context) {
         evoDb.Write(DB_BEST_BLOCK_UPGRADE, block.GetHash());
@@ -138,6 +139,10 @@ bool CQuorumBlockProcessor::ProcessBlock(const CBlock& block, const CBlockIndex*
         
         if (fDIP0008Active_context) {
             usedLLMQs.insert(usedLLMQs.end(), { Consensus::LLMQ_30_80 });
+        }
+
+        if (fLLMQ_40_55Enabled) {
+            usedLLMQs.insert(usedLLMQs.end(), { Consensus::LLMQ_40_55 });
         }
     }
 

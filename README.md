@@ -1,4 +1,4 @@
-# **Alterdot (ADOT) v1.9.3.0**
+# **Alterdot (ADOT) v1.9.4.0**
 
 <table>
  <tr>
@@ -32,7 +32,7 @@
 
 **Project previously known as [Bitcreds](https://github.com/Bitcreds/Bitcreds).**
 
-**Note for v1.9.3**: This version of Alterdot freezes rewards at current levels (4 to PoW, 4 to MNs, and 2 to DevFund). The purpose of this change is keeping rewards attractive until Alternodes come to life as they represent a major milestone in our development process. Once that happens, a different reward allocation will be set in place to accomodate the new dynamics of our ecosystem. A hard fork will take place at block 1,131,400, diverging from the old reward structure.
+**Note for v1.9.4**: This update introduces a new quorum type, LLMQ_40_55, which will improve the functioning of the Masternode system. This will trigger a hard fork at block 1,200,000, so this is a mandatory update for all users of Alterdot. Besides this, a few small optimizations have been made and a new bootstrap has been added to the release.
 
 What is Alterdot?
 ----------------

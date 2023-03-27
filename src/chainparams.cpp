@@ -199,25 +199,26 @@ static Consensus::LLMQParams llmq10_60 = {
 
         .keepOldConnections = 5,
 };
-/* for future usage, commented now it order to not trigger unncessary initializations
-static Consensus::LLMQParams llmq20_60 = {
-        .type = Consensus::LLMQ_20_60,
-        .name = "llmq_20_60",
-        .size = 20,
-        .minSize = 16,
-        .threshold = 12,
 
-        .dkgInterval = 10 * 8, // one DKG every 8 hours
-        .dkgPhaseBlocks = 4,
-        .dkgMiningWindowStart = 20, // dkgPhaseBlocks * 5 = after finalization
-        .dkgMiningWindowEnd = 32,
-        .dkgBadVotesThreshold = 14,
+// used mainly to ensure the proper functioning of the PoSe banning system
+static Consensus::LLMQParams llmq40_55 = {
+        .type = Consensus::LLMQ_40_55,
+        .name = "llmq_40_55",
+        .size = 40,
+        .minSize = 24,
+        .threshold = 22,
 
-        .signingActiveQuorumCount = 2, // 16 hours worth of LLMQs
+        .dkgInterval = 10 * 2, // one DKG every 2 hours
+        .dkgPhaseBlocks = 2,
+        .dkgMiningWindowStart = 10, // dkgPhaseBlocks * 5 = after finalization
+        .dkgMiningWindowEnd = 18,
+        .dkgBadVotesThreshold = 23,
 
-        .keepOldConnections = 3,
+        .signingActiveQuorumCount = 1, // 2 hours worth of LLMQs
+
+        .keepOldConnections = 2,
 };
-*/
+
 static Consensus::LLMQParams llmq30_80 = {
         .type = Consensus::LLMQ_30_80,
         .name = "llmq_30_80",
@@ -296,8 +297,10 @@ public:
 
         consensus.DIP0008Height = 1078000; // corresponds to ChainLocks context activation, version two of quorum commitments, hard fork block
         consensus.DIP0008EnforcementHeight = 1078200; // enforcement of ChainLocks
-        //consensus.DIP0008EnforcementHash = uint256S("000000000000002d1734087b4c5afc3133e4e1c3e1a89218f62bcd9bb3d17f81"); // TODO_ADOT_FUTURE to be mined
+        //consensus.DIP0008EnforcementHash = uint256S("000000000000002d1734087b4c5afc3133e4e1c3e1a89218f62bcd9bb3d17f81"); // TODO_ADOT_LOW
         
+        consensus.LLMQ_40_55StartHeight = 1200000;
+
         //consensus.nPowTargetTimespan = 24 * 60 * 60; // Alterdot: 1 day, not used in Alterdot
         consensus.nDifficultyAdjustmentInterval = 576; // biggest time frame used by the DELTA retargeting algo, we switched to LWMA but this is used for older blocks
         consensus.nOldPowTargetSpacing = 2 * 64; // 128 seconds
@@ -347,10 +350,10 @@ public:
         consensus.vDeployments[Consensus::DEPLOYMENT_DIP0008].nThreshold = 3226; // 80% of 4032
 
         // The best chain should have at least this much work.
-        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000f83beed5a351"); // 1062000
+        consensus.nMinimumChainWork = uint256S("0x0000000000000000000000000000000000000000000000000000fb935a3c113c"); // 1186000
 
         // By default assume that the signatures in ancestors of this block are valid.
-        consensus.defaultAssumeValid = uint256S("0x000007899bd1c7c36b7b93b90969b826a255d87943c014847d3ef2e0094916c6"); // 1062000
+        consensus.defaultAssumeValid = uint256S("0x0000007146e533db55325bc44cbd41fef1747c69790f8ffdc61ad9a1542d799e"); // 1186000
 
         /**
          * The message start string is designed to be unlikely to occur in normal data.
@@ -395,9 +398,10 @@ public:
 
         // Alterdot LLMQs
         consensus.llmqs[Consensus::LLMQ_10_60] = llmq10_60;
-        //consensus.llmqs[Consensus::LLMQ_20_60] = llmq20_60;
+        consensus.llmqs[Consensus::LLMQ_40_55] = llmq40_55;
         consensus.llmqs[Consensus::LLMQ_30_80] = llmq30_80;
-        
+
+        consensus.llmqTypesUsed = { Consensus::LLMQ_10_60, Consensus::LLMQ_40_55, Consensus::LLMQ_30_80 };
         consensus.llmqChainLocks = Consensus::LLMQ_30_80;
         consensus.llmqForInstantSend = Consensus::LLMQ_10_60;
 
@@ -433,11 +437,12 @@ public:
             ( 1001000, uint256S("0x0000048d4c8d0a5d15984aff57b27a67499457d27d6bef47199ace612643eb29"))
             ( 1042000, uint256S("0x000008552f7ecb43e963b811e86bfec4636ac1aafb43b9dd4ae9b4e39a42d037"))
             ( 1062000, uint256S("0x000007899bd1c7c36b7b93b90969b826a255d87943c014847d3ef2e0094916c6"))
+            ( 1186000, uint256S("0x0000007146e533db55325bc44cbd41fef1747c69790f8ffdc61ad9a1542d799e"))
         };
 
         chainTxData = ChainTxData {
-            1634304192,  //  * UNIX timestamp of last checkpoint block (1063452)
-            1453403,    //  * total number of transactions between genesis and last checkpoint (the tx=... number in the UpdateTip debug.log lines)
+            1679074451,  //  * UNIX timestamp of last checkpoint block (1063452)
+            1687260,    //  * total number of transactions between genesis and last checkpoint (the tx=... number in the UpdateTip debug.log lines)
             400        //  * estimated number of transactions per day after checkpoint
         };
 

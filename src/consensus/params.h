@@ -8,6 +8,7 @@
 
 #include "uint256.h"
 #include <map>
+#include <set>
 #include <string>
 
 namespace Consensus {
@@ -51,7 +52,7 @@ enum LLMQType : uint8_t
 
     // Alterdot LLMQs
     LLMQ_10_60 = 4, // 10 members, 6 (60%) threshold, one every 2 hours
-    //LLMQ_20_60 = 5, // 20 members, 12 (60%) threshold, one every 8 hours
+    LLMQ_40_55 = 5, // 40 members, 22 (55%) threshold, one every 2 hours
     LLMQ_30_80 = 6, // 30 members, 24 (80%) threshold, one every 16 hours
 
     // for testing only
@@ -69,9 +70,9 @@ struct LLMQParams {
     // the size of the quorum, e.g. 50 or 400
     int size;
 
-    // The minimum number of valid members after the DKK. If less members are determined valid, no commitment can be
+    // The minimum number of valid members after the DKG. If less members are determined valid, no commitment can be
     // created. Should be higher then the threshold to allow some room for failing nodes, otherwise quorum might end up
-    // not being able to ever created a recovered signature if more nodes fail after the DKG
+    // not being able to ever create a recovered signature if more nodes fail after the DKG
     int minSize;
 
     // The threshold required to recover a final signature. Should be at least 50%+1 of the quorum size. This value
@@ -187,6 +188,9 @@ struct Params {
     int DIP0008EnforcementHeight; // TODO_ADOT_FUTURE ChainLocks and LLMQ-based InstantSend
     uint256 DIP0008EnforcementHash;
 
+    /** Block height at which LLMQ_40_55 starts being used */
+    int LLMQ_40_55StartHeight;
+
     /**
      * Minimum blocks including miner confirmation of the total of nMinerConfirmationWindow blocks in a retargeting period,
      * (nPowTargetTimespan / nPowTargetSpacing) which is also used for BIP9 deployments.
@@ -230,6 +234,7 @@ struct Params {
     int nHighSubsidyFactor{1};
 
     std::map<LLMQType, LLMQParams> llmqs;
+    std::set<LLMQType> llmqTypesUsed;
     LLMQType llmqChainLocks;
     LLMQType llmqForInstantSend{LLMQ_NONE};
 };
