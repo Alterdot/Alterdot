@@ -12,6 +12,7 @@
 #include <sync.h>
 #include <util.h>
 #include <stdint.h>
+#include <stack>
 
 class arith_uint256;
 class CBlockHeader;
@@ -35,12 +36,14 @@ class uint256;
 #define BIGINT_DIVIDE(x, y) x / y
 #define BIGINT_GREATER_THAN(x, y) (x > y)
 
-unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params&);
-unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params&);
-unsigned int DeriveNextWorkRequiredLWMA(const INDEX_TYPE pindexLast, const BLOCK_TYPE block, const Consensus::Params&);
-unsigned int DeriveNextWorkRequiredDELTA(const INDEX_TYPE pindexLast, const BLOCK_TYPE block, const Consensus::Params&);
+std::stack<const CBlockIndex *> GetIntervalBlocks(const CBlockIndex *pindexLast, const Consensus::Params &params, int algo);
+unsigned int GetNextWorkRequired(const CBlockIndex *pindexLast, const CBlockHeader *pblock, const Consensus::Params &params, int algo);
+unsigned int DeriveNextWorkRequiredLWMA(const CBlockIndex *pindexLast, const Consensus::Params &params,
+                                        const int nAveragingIntervalLength, int algo);
+unsigned int DeriveNextWorkRequiredDELTA(const INDEX_TYPE pindexLast, const BLOCK_TYPE block, const Consensus::Params &params);
 
 /** Check whether a block hash satisfies the proof-of-work requirement specified by nBits */
-bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&);
+bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params &params);
+uint256 GetPoWAlgoHash(const CBlockHeader& block);
 
 #endif // BITCOIN_POW_H

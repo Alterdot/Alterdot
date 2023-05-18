@@ -12,7 +12,46 @@
 #include "uint256.h"
 #include "utilstrencodings.h"
 
+namespace Consensus { struct Params; }
+
 const uint32_t nTimeOfAlgorithmChange = 1612029600;
+
+enum {
+    ALGO_UNKNOWN = -1,
+    ALGO_ARGON2D  = 0,
+    ALGO_RANDOMX   = 1,
+    NUM_ALGOS_IMPL };
+
+const int NUM_ALGOS = 2;
+
+enum {
+    // primary version
+    BLOCK_VERSION_DEFAULT        = 2,
+
+    // algo
+    BLOCK_VERSION_ALGO           = (3 << 8),
+    BLOCK_VERSION_ARGON2D        = (0 << 8),
+    BLOCK_VERSION_RANDOMX        = (2 << 8),
+};
+
+std::string GetAlgoName(int Algo);
+
+int GetAlgoByName(std::string strAlgo, int fallback);
+
+inline int GetVersionForAlgo(int algo)
+{
+    switch(algo)
+    {
+        case ALGO_ARGON2D:
+            return BLOCK_VERSION_ARGON2D;
+        case ALGO_RANDOMX:
+            return BLOCK_VERSION_RANDOMX;
+        default:
+            assert(false);
+            return 0;
+    }
+}
+
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
@@ -64,13 +103,17 @@ public:
         return (nBits == 0);
     }
 
-    uint256 GetHash() const
+    // Set Algo to use
+    inline void SetAlgo(int algo)
     {
-        if (nTime > nTimeOfAlgorithmChange)
-            return hash_Argon2d(BEGIN(nVersion), END(nNonce), 2);
-        else
-            return hash_Argon2d(BEGIN(nVersion), END(nNonce), 1);
+        nVersion |= GetVersionForAlgo(algo);
     }
+
+    int GetAlgo() const;
+
+    uint256 GetHash() const;
+
+    uint256 GetPoWAlgoHash(const Consensus::Params& params) const;
 
     int64_t GetBlockTime() const
     {
@@ -126,7 +169,7 @@ public:
         return block;
     }
 
-    std::string ToString() const;
+    std::string ToString(const Consensus::Params& params) const;
 };
 
 

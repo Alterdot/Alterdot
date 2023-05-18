@@ -10,20 +10,73 @@
 #include "tinyformat.h"
 #include "utilstrencodings.h"
 #include "crypto/common.h"
+#include <arith_uint256.h>
 
-std::string CBlock::ToString() const
+uint256 CBlockHeader::GetHash() const
+{
+    if (nTime > nTimeOfAlgorithmChange)
+        return hash_Argon2d(BEGIN(nVersion), END(nNonce), 2);
+    else
+        return hash_Argon2d(BEGIN(nVersion), END(nNonce), 1);
+
+}
+
+int CBlockHeader::GetAlgo() const
+{
+    switch (nVersion & BLOCK_VERSION_ALGO)
+    {
+        case BLOCK_VERSION_ARGON2D:
+            return ALGO_ARGON2D;
+        case BLOCK_VERSION_RANDOMX:
+            return ALGO_RANDOMX;
+    }
+    return ALGO_UNKNOWN;
+}
+
+std::string GetAlgoName(int Algo)
+{
+    switch (Algo)
+    {
+        case ALGO_ARGON2D:
+            return {"argon2d"};
+        case ALGO_RANDOMX:
+            return {"randomX"};
+        default:
+            return {"unknown"};
+    }
+}
+
+
+uint256 CBlockHeader::GetPoWAlgoHash(const Consensus::Params& params) const
+{
+    switch (GetAlgo())
+    {
+        case ALGO_ARGON2D:
+            return GetHash();
+        case ALGO_RANDOMX:
+            return GetHash();
+        case ALGO_UNKNOWN:
+            // This block will be rejected anyway, but returning an always-invalid
+            // PoW hash will allow it to be rejected sooner.
+            return ArithToUint256(~arith_uint256(0));
+    }
+    assert(false);
+}
+
+std::string CBlock::ToString(const Consensus::Params& params) const
 {
     std::stringstream s;
-    s << strprintf("CBlock(hash=%s, ver=0x%08x, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%u)\n",
-        GetHash().ToString(),
-        nVersion,
-        hashPrevBlock.ToString(),
-        hashMerkleRoot.ToString(),
-        nTime, nBits, nNonce,
-        vtx.size());
-    for (unsigned int i = 0; i < vtx.size(); i++)
-    {
-        s << "  " << vtx[i]->ToString() << "\n";
+    s << strprintf("CBlock(hash=%s, ver=0x%08x, pow_algo=%d, pow_hash=%s, hashPrevBlock=%s, hashMerkleRoot=%s, nTime=%u, nBits=%08x, nNonce=%u, vtx=%u)\n",
+                   GetHash().ToString(),
+                   nVersion,
+                   GetAlgo(),
+                   GetPoWAlgoHash(params).ToString(),
+                   hashPrevBlock.ToString(),
+                   hashMerkleRoot.ToString(),
+                   nTime, nBits, nNonce,
+                   vtx.size());
+    for (const auto& tx : vtx) {
+        s << "  " << tx->ToString() << "\n";
     }
     return s.str();
 }

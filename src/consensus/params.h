@@ -214,20 +214,6 @@ struct Params {
     uint256 nMinimumChainWork;
     uint256 defaultAssumeValid;
 
-    int64_t GetCurrentPowTargetSpacing(const int& nHeight) const {
-        if (nHeight > nHardForkSix)
-            return nNewPowTargetSpacing;
-        else
-            return nOldPowTargetSpacing;
-    }
-
-    int GetCurrentMasternodeCollateral(const int& nHeight) const {
-        if (nHeight > nHardForkSix)
-            return nNewMasternodeCollateral;
-        else
-            return nOldMasternodeCollateral;
-    }
-
     /** these parameters are only used on devnet and can be configured from the outside */
     int nMinimumDifficultyBlocks{0};
     int nHighSubsidyBlocks{0};
@@ -237,6 +223,25 @@ struct Params {
     std::set<LLMQType> llmqTypesUsed;
     LLMQType llmqChainLocks;
     LLMQType llmqForInstantSend{LLMQ_NONE};
+
+    int multiAlgoFork;
+    int nAveragingIntervalLength;
+    int nAveragingIntervalLengthBeforeMultiMiningAlgo;
+
+    int64_t GetCurrentPowTargetSpacing(const int& nHeight) const {
+        if (nHeight > nHardForkSix)
+            return nNewPowTargetSpacing;
+        else
+            return nOldPowTargetSpacing;
+    }
+
+    int GetAveragingIntervalLength(const int &nHeight) const {
+        if(nHeight >= multiAlgoFork) {
+            return nAveragingIntervalLength;
+        } else {
+            return nAveragingIntervalLengthBeforeMultiMiningAlgo;
+        }
+    }
 };
 } // namespace Consensus
 

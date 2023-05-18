@@ -14,50 +14,103 @@
 
 #include <math.h>
 #include <algorithm>
+#include <stack>
 
-unsigned int GetNextWorkRequired(const CBlockIndex* pindexLast, const CBlockHeader *pblock, const Consensus::Params& params)
+inline unsigned int PowLimit(const Consensus::Params& params)
 {
+    return UintToArith256(params.powLimit).GetCompact();
+}
+
+unsigned int InitialDifficulty(const Consensus::Params& params)
+{
+    return PowLimit(params);
+}
+
+const CBlockIndex *GetLastBlockIndexForAlgo(const CBlockIndex *pindex, const Consensus::Params &params, int algo) {
+    for (; pindex; pindex = pindex->pprev) {
+        if (pindex->GetAlgo() != algo)
+            continue;
+        // ignore special min-difficulty testnet blocks
+        if (params.fPowAllowMinDifficultyBlocks &&
+            pindex->pprev &&
+            pindex->nTime > pindex->pprev->nTime + params.GetCurrentPowTargetSpacing(pindex->nHeight) * 2) {
+            continue;
+        }
+        return pindex;
+    }
+    return nullptr;
+}
+
+
+std::stack<const CBlockIndex *> GetIntervalBlocks(const CBlockIndex *pindexLast, const Consensus::Params &params, int algo) {
+    std::stack<const CBlockIndex *> blocks;
+    const CBlockIndex *currentIndex = pindexLast;
+
+    for (int i = 0; i <= params.GetAveragingIntervalLength(pindexLast->nHeight); i++) {
+        currentIndex = GetLastBlockIndexForAlgo(currentIndex, params, algo);
+        blocks.push(currentIndex);
+    }
+
+    return blocks;
+}
+
+
+unsigned int GetNextWorkRequired(const CBlockIndex *pindexLast, const CBlockHeader *pblock,
+                                 const Consensus::Params &params, int algo) {
     // this is only active on devnets
     if (pindexLast->nHeight < params.nMinimumDifficultyBlocks) {
         unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();
         return nProofOfWorkLimit;
     }
 
-    // Most recent algo first
-    if (pindexLast->nHeight + 1 >= params.nHardForkSeven) {
-        return DeriveNextWorkRequiredLWMA(pindexLast, pblock, params);
+    if (pindexLast->nHeight >= params.multiAlgoFork) {
+        return DeriveNextWorkRequiredLWMA(pindexLast, params,
+                                          params.GetAveragingIntervalLength(pindexLast->nHeight), algo);
     } else {
-        return DeriveNextWorkRequiredDELTA(pindexLast, pblock, params);
+        // Next block is the fork block
+        if (pindexLast->nHeight + 1 >= params.nHardForkSeven) {
+            return DeriveNextWorkRequiredLWMA(pindexLast, params,
+                                              params.GetAveragingIntervalLength(pindexLast->nHeight), 0);
+        } else {
+            return DeriveNextWorkRequiredDELTA(pindexLast, pblock, params);
+        }
     }
 }
 
-unsigned int DeriveNextWorkRequiredLWMA(const INDEX_TYPE pindexLast, const BLOCK_TYPE block, const Consensus::Params& params)
-{
+
+unsigned int DeriveNextWorkRequiredLWMA(const CBlockIndex *pindexLast, const Consensus::Params &params,
+                                        const int nAveragingIntervalLength, int algo) {
     const int64_t T = params.GetCurrentPowTargetSpacing(pindexLast->nHeight + 1);
 
-    // For T=600, 300, 150 use approximately N=60, 90, 120
-    const int64_t N = 80; // TODO_ADOT_LOW maybe move to params
-
     // Define a k that will be used to get a proper average after weighting the solvetimes.
-    const int64_t k = N * (N + 1) * T / 2;
+    const int64_t k = nAveragingIntervalLength * (nAveragingIntervalLength + 1) * T / 2;
 
     const int64_t height = pindexLast->nHeight;
     const arith_uint256 powLimit = UintToArith256(params.powLimit);
 
-    // New coins just "give away" first N blocks. It's better to guess
+    // New coins just "give away" first nAveragingIntervalLength blocks. It's better to guess
     // this value instead of using powLimit, but err on high side to not get stuck.
-    if (height < N) { return powLimit.GetCompact(); }
+    if (height < nAveragingIntervalLength) { return powLimit.GetCompact(); }
 
     arith_uint256 avgTarget, nextTarget;
     int64_t thisTimestamp, previousTimestamp;
     int64_t sumWeightedSolvetimes = 0, j = 0;
 
-    const CBlockIndex* blockPreviousTimestamp = pindexLast->GetAncestor(height - N);
-    previousTimestamp = blockPreviousTimestamp->GetBlockTime();
+    std::stack<const CBlockIndex *> blocks= GetIntervalBlocks(pindexLast, params, algo);
 
-    // Loop through N most recent blocks.
-    for (int64_t i = height - N + 1; i <= height; i++) {
-        const CBlockIndex* block = pindexLast->GetAncestor(i);
+    if(blocks.size() != nAveragingIntervalLength + 1) {
+        return InitialDifficulty(params);
+    }
+
+    const CBlockIndex *block;
+    previousTimestamp = blocks.top()->GetBlockTime();
+    blocks.pop();
+
+    // Loop through nAveragingIntervalLength most recent blocks
+    for (int64_t i = 0; i < nAveragingIntervalLength; i++) {
+
+        block = blocks.top();
+        blocks.pop();
 
         // Prevent solvetimes from being negative in a safe way. It must be done like this.
         // Do not attempt anything like  if (solvetime < 1) {solvetime=1;}
@@ -76,7 +129,7 @@ unsigned int DeriveNextWorkRequiredLWMA(const INDEX_TYPE pindexLast, const BLOCK
 
         arith_uint256 target;
         target.SetCompact(block->nBits);
-        avgTarget += target / N / k; // Dividing by k here prevents an overflow below.
+        avgTarget += target / nAveragingIntervalLength / k; // Dividing by k here prevents an overflow below.
     }
 
     // Desired equation in next line was nextTarget = avgTarget * sumWeightSolvetimes / k
@@ -89,8 +142,7 @@ unsigned int DeriveNextWorkRequiredLWMA(const INDEX_TYPE pindexLast, const BLOCK
 }
 
 unsigned int DeriveNextWorkRequiredDELTA(const INDEX_TYPE pindexLast, const BLOCK_TYPE block,
-                                    const Consensus::Params& params)
-{
+                                         const Consensus::Params &params) {
     int64_t nRetargetTimespan = params.GetCurrentPowTargetSpacing(pindexLast->nHeight + 1);
     const unsigned int nProofOfWorkLimit = UintToArith256(params.powLimit).GetCompact();
 
@@ -121,9 +173,9 @@ unsigned int DeriveNextWorkRequiredDELTA(const INDEX_TYPE pindexLast, const BLOC
     int64_t nLongTimeLimit = ((6 * nDrift)) * 60;
     int64_t nLongTimeStep = nDrift * 60;
 
-    unsigned int nMinimumAdjustLimit = (unsigned int)nRetargetTimespan * 75 / PERCENT_FACTOR;
+    unsigned int nMinimumAdjustLimit = (unsigned int) nRetargetTimespan * 75 / PERCENT_FACTOR;
 
-    unsigned int nMaximumAdjustLimit = (unsigned int)nRetargetTimespan * 150 / PERCENT_FACTOR;
+    unsigned int nMaximumAdjustLimit = (unsigned int) nRetargetTimespan * 150 / PERCENT_FACTOR;
 
     int64_t nDeltaTimespan = 0;
     int64_t nLBTimespan = 0;
@@ -171,8 +223,7 @@ unsigned int DeriveNextWorkRequiredDELTA(const INDEX_TYPE pindexLast, const BLOC
 
     if (INDEX_HEIGHT(pindexLast) - initalBlock <= nMiddleFrame) {
         nMiddleWeight = nMiddleTimespan = 0;
-    }
-    else {
+    } else {
         pindexFirst = pindexLast;
         for (unsigned int i = 1; pindexFirst != NULL && i <= nMiddleFrame; i++) {
             nDeltaTimespan = INDEX_TIME(pindexFirst) - INDEX_TIME(INDEX_PREV(pindexFirst));
@@ -187,8 +238,7 @@ unsigned int DeriveNextWorkRequiredDELTA(const INDEX_TYPE pindexLast, const BLOC
 
     if (INDEX_HEIGHT(pindexLast) - initalBlock <= nLongFrame) {
         nLongWeight = nLongTimespan = 0;
-    }
-    else {
+    } else {
         pindexFirst = pindexLast;
         for (unsigned int i = 1; pindexFirst != NULL && i <= nLongFrame; i++)
             pindexFirst = INDEX_PREV(pindexFirst);
@@ -196,7 +246,8 @@ unsigned int DeriveNextWorkRequiredDELTA(const INDEX_TYPE pindexLast, const BLOC
         nLongTimespan = INDEX_TIME(pindexLast) - INDEX_TIME(pindexFirst);
     }
 
-    if ((nQBTimespan > nBadTimeLimit) && (nQBTimespan < nQBMinGap) && (nLBTimespan < nRetargetTimespan * 40 / PERCENT_FACTOR)) {
+    if ((nQBTimespan > nBadTimeLimit) && (nQBTimespan < nQBMinGap) &&
+        (nLBTimespan < nRetargetTimespan * 40 / PERCENT_FACTOR)) {
         nMiddleWeight = nMiddleTimespan = nLongWeight = nLongTimespan = 0;
     }
 
@@ -207,12 +258,11 @@ unsigned int DeriveNextWorkRequiredDELTA(const INDEX_TYPE pindexLast, const BLOC
     nWeightedTimespan = nWeightedSum / nWeightedDiv;
 
     if (DIFF_ABS(nLBTimespan - nRetargetTimespan) < nRetargetTimespan * 20 / PERCENT_FACTOR) {
-        nMinimumAdjustLimit = (unsigned int)nRetargetTimespan * 90 / PERCENT_FACTOR;
-        nMaximumAdjustLimit = (unsigned int)nRetargetTimespan * 110 / PERCENT_FACTOR;
-    }
-    else if (DIFF_ABS(nLBTimespan - nRetargetTimespan) < nRetargetTimespan * 30 / PERCENT_FACTOR) {
-        nMinimumAdjustLimit = (unsigned int)nRetargetTimespan * 80 / PERCENT_FACTOR;
-        nMaximumAdjustLimit = (unsigned int)nRetargetTimespan * 120 / PERCENT_FACTOR;
+        nMinimumAdjustLimit = (unsigned int) nRetargetTimespan * 90 / PERCENT_FACTOR;
+        nMaximumAdjustLimit = (unsigned int) nRetargetTimespan * 110 / PERCENT_FACTOR;
+    } else if (DIFF_ABS(nLBTimespan - nRetargetTimespan) < nRetargetTimespan * 30 / PERCENT_FACTOR) {
+        nMinimumAdjustLimit = (unsigned int) nRetargetTimespan * 80 / PERCENT_FACTOR;
+        nMaximumAdjustLimit = (unsigned int) nRetargetTimespan * 120 / PERCENT_FACTOR;
     }
 
     if (nWeightedTimespan < nMinimumAdjustLimit)
@@ -234,8 +284,7 @@ unsigned int DeriveNextWorkRequiredDELTA(const INDEX_TYPE pindexLast, const BLOC
             SET_COMPACT(bnNew, INDEX_TARGET(pindexLast));
             bnNew = BIGINT_MULTIPLY(bnNew, arith_uint256(95));
             bnNew = BIGINT_DIVIDE(bnNew, arith_uint256(PERCENT_FACTOR));
-        }
-        else {
+        } else {
             SET_COMPACT(bnNew, INDEX_TARGET(pindexLast));
         }
     }
@@ -255,34 +304,7 @@ unsigned int DeriveNextWorkRequiredDELTA(const INDEX_TYPE pindexLast, const BLOC
     return GET_COMPACT(bnNew);
 }
 
-// for DIFF_BTC only!
-unsigned int CalculateNextWorkRequired(const CBlockIndex* pindexLast, int64_t nFirstBlockTime, const Consensus::Params& params)
-{
-    if (params.fPowNoRetargeting)
-        return pindexLast->nBits;
-
-    // Limit adjustment step
-    int64_t nActualTimespan = pindexLast->GetBlockTime() - nFirstBlockTime;
-    if (nActualTimespan < params.nPowTargetTimespan/4)
-        nActualTimespan = params.nPowTargetTimespan/4;
-    if (nActualTimespan > params.nPowTargetTimespan*4)
-        nActualTimespan = params.nPowTargetTimespan*4;
-
-    // Retarget
-    const arith_uint256 bnPowLimit = UintToArith256(params.powLimit);
-    arith_uint256 bnNew;
-    bnNew.SetCompact(pindexLast->nBits);
-    bnNew *= nActualTimespan;
-    bnNew /= params.nPowTargetTimespan;
-
-    if (bnNew > bnPowLimit)
-        bnNew = bnPowLimit;
-
-    return bnNew.GetCompact();
-}
-
-bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params& params)
-{
+bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params &params) {
     bool fNegative;
     bool fOverflow;
     arith_uint256 bnTarget;
@@ -298,4 +320,9 @@ bool CheckProofOfWork(uint256 hash, unsigned int nBits, const Consensus::Params&
         return false;
 
     return true;
+}
+
+uint256 GetPoWAlgoHash(const CBlockHeader& block)
+{
+    return block.GetPoWAlgoHash(Params().GetConsensus());
 }
