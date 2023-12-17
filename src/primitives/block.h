@@ -12,7 +12,8 @@
 #include "uint256.h"
 #include "utilstrencodings.h"
 
-const uint32_t nTimeOfAlgorithmChange = 1612029600;
+const uint32_t nArgon2d16kAlgoSwitchTime = 1612029600; // January 30th 2021 18:00:00 GMT
+const uint32_t nGhostRiderAlgoSwitchTime = 1706637600; // January 30th 2024 18:00:00 GMT
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
@@ -66,10 +67,13 @@ public:
 
     uint256 GetHash() const
     {
-        if (nTime > nTimeOfAlgorithmChange)
+        if (nTime > nGhostRiderAlgoSwitchTime) {
+            return hash_GhostRider(BEGIN(nVersion), END(nNonce), hashPrevBlock);
+        } else if (nTime > nArgon2d16kAlgoSwitchTime) {
             return hash_Argon2d(BEGIN(nVersion), END(nNonce), 2);
-        else
+        } else {
             return hash_Argon2d(BEGIN(nVersion), END(nNonce), 1);
+        }
     }
 
     int64_t GetBlockTime() const

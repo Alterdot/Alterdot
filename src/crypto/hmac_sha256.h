@@ -2,10 +2,10 @@
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
-#ifndef ADOT_CRYPTO_HMAC_SHA256_H
-#define ADOT_CRYPTO_HMAC_SHA256_H
+#ifndef BITCOIN_CRYPTO_HMAC_SHA256_H
+#define BITCOIN_CRYPTO_HMAC_SHA256_H
 
-#include "crypto/sha256.h"
+#include <crypto/sha256.h>
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -29,4 +29,4 @@ public:
     void Finalize(unsigned char hash[OUTPUT_SIZE]);
 };
 
-#endif // ADOT_CRYPTO_HMAC_SHA256_H
+#endif // BITCOIN_CRYPTO_HMAC_SHA256_H

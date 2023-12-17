@@ -5,15 +5,15 @@
 
 #include <iostream>
 
-#include "bench.h"
-#include "bloom.h"
-#include "hash.h"
-#include "uint256.h"
-#include "utiltime.h"
-#include "crypto/ripemd160.h"
-#include "crypto/sha1.h"
-#include "crypto/sha256.h"
-#include "crypto/sha512.h"
+#include <bench/bench.h>
+#include <bloom.h>
+#include <hash.h>
+#include <uint256.h>
+#include <utiltime.h>
+#include <crypto/ripemd160.h>
+#include <crypto/sha1.h>
+#include <crypto/sha256.h>
+#include <crypto/sha512.h>
 
 /* Number of bytes to hash per iteration */
 static const uint64_t BUFFER_SIZE = 1000*1000;
@@ -186,6 +186,103 @@ static void HASH_ARGON2D16K_2048b_single(benchmark::State& state)
         hash = hash_Argon2d(in.begin(), in.end(), 2);
 }
 
+static void HASH_GR(benchmark::State& state)
+{
+    uint256 hash;
+    std::vector<uint8_t> in(BUFFER_SIZE,0);
+    while (state.KeepRunning())
+        hash = hash_GhostRider(in.begin(), in.end(), uint256());
+}
+
+static void HASH_GR_0032b_single(benchmark::State& state)
+{
+    uint256 hash;
+    std::vector<uint8_t> in(32,0);
+    while (state.KeepRunning())
+        hash = hash_GhostRider(in.begin(), in.end(), uint256());
+}
+
+static void HASH_GR_0080b_single(benchmark::State& state)
+{
+    uint256 hash;
+    std::vector<uint8_t> in(80,0);
+    while (state.KeepRunning())
+        hash = hash_GhostRider(in.begin(), in.end(), uint256());
+}
+
+static void HASH_GR_0128b_single(benchmark::State& state)
+{
+    uint256 hash;
+    std::vector<uint8_t> in(128,0);
+    while (state.KeepRunning())
+        hash = hash_GhostRider(in.begin(), in.end(), uint256());
+}
+
+static void HASH_GR_0512b_single(benchmark::State& state)
+{
+    uint256 hash;
+    std::vector<uint8_t> in(512,0);
+    while (state.KeepRunning())
+        hash = hash_GhostRider(in.begin(), in.end(), uint256());
+}
+
+static void HASH_GR_1024b_single(benchmark::State& state)
+{
+    uint256 hash;
+    std::vector<uint8_t> in(1024,0);
+    while (state.KeepRunning())
+        hash = hash_GhostRider(in.begin(), in.end(), uint256());
+}
+
+static void HASH_GR_2048b_single(benchmark::State& state)
+{
+    uint256 hash;
+    std::vector<uint8_t> in(2048,0);
+    while (state.KeepRunning())
+        hash = hash_GhostRider(in.begin(), in.end(), uint256());
+}
+
+static void HashCn(benchmark::State& state, int hashSelection)
+{
+    uint512 hashIn;
+    uint512 hashOut;
+    while (state.KeepRunning())
+    {
+        cnHash(&hashIn, &hashOut, 64, hashSelection);
+        hashIn = hashOut;
+    }
+}
+
+static void HASH_CN_cryptonight_dark_hash(benchmark::State& state)
+{
+    HashCn(state, 0);
+}
+
+static void HASH_CN_cryptonight_darklite_hash(benchmark::State& state)
+{
+    HashCn(state, 1);
+}
+
+static void HASH_CN_cryptonight_cnfast_hash(benchmark::State& state)
+{
+    HashCn(state, 2);
+}
+
+static void HASH_CN_cryptonight_cnlite_hash(benchmark::State& state)
+{
+    HashCn(state, 3);
+}
+
+static void HASH_CN_cryptonight_turtle_hash(benchmark::State& state)
+{
+    HashCn(state, 4);
+}
+
+static void HASH_CN_cryptonight_turtlelite_hash(benchmark::State& state)
+{
+    HashCn(state, 5);
+}
+
 BENCHMARK(HASH_RIPEMD160);
 BENCHMARK(HASH_SHA1);
 BENCHMARK(HASH_SHA256);
@@ -209,3 +306,16 @@ BENCHMARK(HASH_ARGON2D16K_0128b_single);
 BENCHMARK(HASH_ARGON2D16K_0512b_single);
 BENCHMARK(HASH_ARGON2D16K_1024b_single);
 BENCHMARK(HASH_ARGON2D16K_2048b_single);
+BENCHMARK(HASH_GR_0032b_single);
+BENCHMARK(HASH_GR_0080b_single);
+BENCHMARK(HASH_GR_0128b_single);
+BENCHMARK(HASH_GR_0512b_single);
+BENCHMARK(HASH_GR_1024b_single);
+BENCHMARK(HASH_GR_2048b_single);
+
+BENCHMARK(HASH_CN_cryptonight_dark_hash);
+BENCHMARK(HASH_CN_cryptonight_darklite_hash);
+BENCHMARK(HASH_CN_cryptonight_cnfast_hash);
+BENCHMARK(HASH_CN_cryptonight_cnlite_hash);
+BENCHMARK(HASH_CN_cryptonight_turtle_hash);
+BENCHMARK(HASH_CN_cryptonight_turtlelite_hash);
