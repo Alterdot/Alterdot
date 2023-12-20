@@ -253,7 +253,7 @@ class CMainParams : public CChainParams {
 public:
     CMainParams() {
         strNetworkID = "main";
-        consensus.nHardForkOne = 250000; // block
+        consensus.nHardForkOne = 250000; // block // TODO_ADOT remove unused hard forks and refactor into array
         consensus.nHardForkTwo = 375000; // block
         consensus.nHardForkThree = 550000; // block
         consensus.nHardForkFour = 665000; // block
@@ -274,8 +274,6 @@ public:
         consensus.nSuperblockCycle = 20545; // 675 (Blocks per day) x 365.25 (Days per Year) / 12 = 20545
         consensus.nGovernanceMinQuorum = 10;
         consensus.nGovernanceFilterElements = 20000;
-        consensus.nOldMasternodeCollateral = 50000;
-        consensus.nNewMasternodeCollateral = 10000;
         consensus.nMasternodeMinimumConfirmations = 15; // TODO_ADOT_FUTURE
         consensus.powLimit = uint256S("0000ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff"); // ~uint256(0) >> 16
         
@@ -577,6 +575,11 @@ public:
         consensus.llmqs[Consensus::LLMQ_400_85] = llmq400_85;
         consensus.llmqChainLocks = Consensus::LLMQ_50_60;
         consensus.llmqForInstantSend = Consensus::LLMQ_50_60;
+        
+        consensus.mnCollaterals = Consensus::MasternodeCollaterals{{
+            { 10000 * COIN, 1260000 },
+            {  2000 * COIN, INT_MAX }
+        }};
 
         fMiningRequiresPeers = true;
         fDefaultConsistencyChecks = false;

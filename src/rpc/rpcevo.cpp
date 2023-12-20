@@ -387,6 +387,18 @@ void protx_register_submit_help(CWallet* const pwallet)
     );
 }
 
+void validateCollateral(CAmount collateralAmount) {
+	auto mnCollaterals = Params().GetConsensus().mnCollaterals;
+	if (!mnCollaterals.isValidCollateral(collateralAmount)) {
+		throw JSONRPCError(RPC_INVALID_COLLATERAL_AMOUNT, strprintf("invalid collateral amount: amount=%d\n", collateralAmount / COIN));
+	}
+
+	int height = chainActive.Height();
+	if(!mnCollaterals.isPayableCollateral(collateralAmount, height)) {
+		throw JSONRPCError(RPC_INVALID_COLLATERAL_AMOUNT, strprintf("collateral amount is not payable at this height: amount=%d; height=%d", collateralAmount / COIN, height));
+	}
+}
+
 // handles register, register_prepare and register_fund in one method
 UniValue protx_register(const JSONRPCRequest& request)
 {
@@ -395,7 +407,7 @@ UniValue protx_register(const JSONRPCRequest& request)
     bool isFundRegister = request.params[0].get_str() == "register_fund";
     bool isPrepareRegister = request.params[0].get_str() == "register_prepare";
 
-    if (isFundRegister && (request.fHelp || (request.params.size() != 8 && request.params.size() != 9))) {
+    if (isFundRegister && (request.fHelp || (request.params.size() != 9 && request.params.size() != 10))) {
         protx_register_fund_help(pwallet);
     } else if (isExternalRegister && (request.fHelp || (request.params.size() != 9 && request.params.size() != 10))) {
         protx_register_help(pwallet);
@@ -412,7 +424,7 @@ UniValue protx_register(const JSONRPCRequest& request)
 
     size_t paramIdx = 1;
 
-    CAmount collateralAmount = 10000 * COIN;
+    CAmount collateralAmount;
 
     CMutableTransaction tx;
     tx.nVersion = 3;
@@ -426,7 +438,10 @@ UniValue protx_register(const JSONRPCRequest& request)
         if (!collateralAddress.IsValid()) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("invalid collaterall address: %s", request.params[paramIdx].get_str()));
         }
+
         CScript collateralScript = GetScriptForDestination(collateralAddress.Get());
+        collateralAmount = ParseInt32V(request.params[paramIdx + 1], "collateralAmount") * COIN;
+        validateCollateral(collateralAmount);
 
         CTxOut collateralTxOut(collateralAmount, collateralScript);
         tx.vout.emplace_back(collateralTxOut);
@@ -438,6 +453,13 @@ UniValue protx_register(const JSONRPCRequest& request)
         if (collateralHash.IsNull() || collateralIndex < 0) {
             throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("invalid hash or index: %s-%d", collateralHash.ToString(), collateralIndex));
         }
+
+        const auto &wtx = pwallet->mapWallet.at(collateralHash);
+        if(wtx.tx == nullptr || wtx.tx->vout.size() <= collateralIndex) {
+          throw JSONRPCError(RPC_INVALID_ADDRESS_OR_KEY, strprintf("Invalid collateral, you do not own the collateral address : hash=%s-%d\n", collateralHash.ToString(), collateralIndex));
+        }
+        collateralAmount = wtx.tx->vout[collateralIndex].nValue;
+        validateCollateral(collateralAmount);
 
         ptx.collateralOutpoint = COutPoint(collateralHash, (uint32_t)collateralIndex);
         paramIdx += 2;
@@ -999,7 +1021,7 @@ UniValue protx_list(const JSONRPCRequest& request)
 
         CDeterministicMNList mnList = deterministicMNManager->GetListForBlock(chainActive[height]);
         bool onlyValid = type == "valid";
-        mnList.ForEachMN(onlyValid, [&](const CDeterministicMNCPtr& dmn) {
+        mnList.ForEachMN(onlyValid, height, [&](const CDeterministicMNCPtr& dmn) {
             ret.push_back(BuildDMNListEntry(pwallet, dmn, detailed));
         });
     } else {

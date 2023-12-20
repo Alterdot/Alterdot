@@ -1,15 +1,19 @@
 // Copyright (c) 2009-2010 Satoshi Nakamoto
 // Copyright (c) 2009-2015 The Bitcoin Core developers
+// Copyright (c) 2020-2022 The Raptoreum developers
 // Distributed under the MIT software license, see the accompanying
 // file COPYING or http://www.opensource.org/licenses/mit-license.php.
 
 #ifndef BITCOIN_CONSENSUS_PARAMS_H
 #define BITCOIN_CONSENSUS_PARAMS_H
 
-#include "uint256.h"
+#include <uint256.h>
+#include <amount.h>
+
 #include <map>
 #include <set>
 #include <string>
+#include <climits>
 
 namespace Consensus {
 
@@ -120,13 +124,40 @@ struct LLMQParams {
     int keepOldConnections;
 };
 
+struct MasternodeCollaterals {
+    std::map<CAmount, int> collateralHeightMap;
+
+    bool isValidCollateral(CAmount collateralAmount) const {
+        auto it = collateralHeightMap.find(collateralAmount);
+        return it != collateralHeightMap.end();
+    }
+
+    bool isPayableCollateral(CAmount collateralAmount, int height) const {
+        if(!isValidCollateral(collateralAmount)) {
+            return false;
+        }
+        int collateralEndHeight = collateralHeightMap.at(collateralAmount);
+        return collateralEndHeight == INT_MAX || height <= collateralEndHeight;
+    }
+
+    CAmount getCollateral(int height) const {
+        for (auto& it : collateralHeightMap) {
+            if (it.second == INT_MAX || height <= it.second) {
+                return it.first;
+            }
+        }
+
+        return 0;
+    }
+};
+
 /**
  * Parameters that influence chain consensus.
  */
 struct Params {
     uint256 hashGenesisBlock;
     uint256 hashDevnetGenesisBlock;
-    int nHardForkOne; // block TODO_ADOT_FUTURE refactor hard forks into an array
+    int nHardForkOne; // block TODO_ADOT_FUTURE refactor hard fork heights into an array & remove unused heights
     int nHardForkTwo; // block
     int nHardForkThree; //block
     int nHardForkFour; //block
@@ -134,7 +165,6 @@ struct Params {
     int nHardForkSix; // block
     int nHardForkSeven; // block, lite/core network mode
     int nHardForkEight; // block, exit core mode, reactivation of MNs and Alterdot-specific functionalities, BIP147
-    //int nDetMNRegHeight; // block, start allowing registration of determinisitc MNs, DIP0003Height has taken its place
     int nTempDevFundIncreaseEnd; //block height for temporal Dev fund increase ending
     int nSubsidyHalvingInterval;
     int nMasternodePaymentsStartBlock;
@@ -150,8 +180,6 @@ struct Params {
     int nSuperblockCycle; // in blocks
     int nGovernanceMinQuorum; // Min absolute vote count to trigger an action
     int nGovernanceFilterElements;
-    int nOldMasternodeCollateral;
-    int nNewMasternodeCollateral; // used for easier switch between collaterals with future hard forks
     int nMasternodeMinimumConfirmations;
     /** Block height and hash at which BIP34 becomes active */
     //int BIP34Height;
@@ -210,7 +238,6 @@ struct Params {
     int64_t nDifficultyAdjustmentInterval;
     int64_t nOldPowTargetSpacing;
     int64_t nNewPowTargetSpacing;
-    //int nPowDGWHeight;
     uint256 nMinimumChainWork;
     uint256 defaultAssumeValid;
 
@@ -219,13 +246,6 @@ struct Params {
             return nNewPowTargetSpacing;
         else
             return nOldPowTargetSpacing;
-    }
-
-    int GetCurrentMasternodeCollateral(const int& nHeight) const {
-        if (nHeight > nHardForkSix)
-            return nNewMasternodeCollateral;
-        else
-            return nOldMasternodeCollateral;
     }
 
     /** these parameters are only used on devnet and can be configured from the outside */
@@ -237,6 +257,8 @@ struct Params {
     std::set<LLMQType> llmqTypesUsed;
     LLMQType llmqChainLocks;
     LLMQType llmqForInstantSend{LLMQ_NONE};
+
+    MasternodeCollaterals mnCollaterals;
 };
 } // namespace Consensus
 

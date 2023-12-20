@@ -116,7 +116,13 @@ bool CDeterministicMNList::IsMNPoSeBanned(const uint256& proTxHash) const
 
 bool CDeterministicMNList::IsMNValid(const CDeterministicMNCPtr& dmn) const
 {
-    return !IsMNPoSeBanned(dmn);
+    int height = chainActive.Tip() == nullptr ? 0 : chainActive.Tip()->nHeight;
+    return IsMNValid(dmn, height);
+}
+
+bool CDeterministicMNList::IsMNValid(const CDeterministicMNCPtr& dmn, int height) const
+{
+    return !IsMNPoSeBanned(dmn) && Params().GetConsensus().mnCollaterals.isPayableCollateral(dmn->pdmnState->nCollateralAmount, height);
 }
 
 bool CDeterministicMNList::IsMNPoSeBanned(const CDeterministicMNCPtr& dmn) const
@@ -280,7 +286,7 @@ std::vector<std::pair<arith_uint256, CDeterministicMNCPtr>> CDeterministicMNList
 {
     std::vector<std::pair<arith_uint256, CDeterministicMNCPtr>> scores;
     scores.reserve(GetAllMNsCount());
-    ForEachMN(true, [&](const CDeterministicMNCPtr& dmn) {
+    ForEachMN(true, nHeight, [&](const CDeterministicMNCPtr& dmn) {
         if (dmn->pdmnState->confirmedHash.IsNull()) {
             // we only take confirmed MNs into account to avoid hash grinding on the ProRegTxHash to sneak MNs into a
             // future quorums
@@ -673,7 +679,8 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
             }
 
             Coin coin;
-            if (!proTx.collateralOutpoint.hash.IsNull() && (!GetUTXOCoin(dmn->collateralOutpoint, coin) || coin.out.nValue != 10000 * COIN)) {
+            if (!proTx.collateralOutpoint.hash.IsNull() &&
+                (!GetUTXOCoin(dmn->collateralOutpoint, coin) || !Params().GetConsensus().mnCollaterals.isValidCollateral(coin.out.nValue))) {
                 // should actually never get to this point as CheckProRegTx should have handled this case.
                 // We do this additional check nevertheless to be 100% sure
                 return _state.DoS(100, false, REJECT_INVALID, "bad-protx-collateral");
@@ -703,6 +710,12 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
 
             CDeterministicMNState dmnState = *dmn->pdmnState;
             dmnState.nRegisteredHeight = nHeight;
+
+            if (proTx.collateralOutpoint.hash.IsNull()) {
+                dmnState.nCollateralAmount = tx.vout[proTx.collateralOutpoint.n].nValue;
+            } else{
+                dmnState.nCollateralAmount = coin.out.nValue;   
+            }
 
             if (proTx.addr == CService()) {
                 // start in banned pdmnState as we need to wait for a ProUpServTx
@@ -960,7 +973,7 @@ bool CDeterministicMNManager::IsProTxWithCollateral(const CTransactionRef& tx, u
     if (proTx.collateralOutpoint.n >= tx->vout.size() || proTx.collateralOutpoint.n != n) {
         return false;
     }
-    if (tx->vout[n].nValue != 10000 * COIN) {
+    if (!Params().GetConsensus().mnCollaterals.isValidCollateral(tx->vout[n].nValue)) {
         return false;
     }
     return true;
