@@ -134,7 +134,7 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CV
 
     // TODO_ADOT_COMMENT BDNS transactions from incoming blocks get processed only when pbdnsdb doesn't have the Reindexing flag set
     // the unindexed transactions from these new blocks are covered in the last section of ReindexBdnsRecords in validation.cpp
-    if (!pbdnsdb->AwaitsReindexing() && pindex->nHeight >= consensusParams.nHardForkEight)
+    if (!pbdnsdb->AwaitsReindexing() && pindex->nHeight >= consensusParams.nHardForkHeights[5])
         ProcessBdnsTransactions(block, *pindex, consensusParams);
 
     int64_t nTime6 = GetTimeMicros(); nTimeBDNS += nTime6 - nTime5;

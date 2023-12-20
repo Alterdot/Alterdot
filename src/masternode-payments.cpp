@@ -236,8 +236,8 @@ void FillBlockPayments(CMutableTransaction& txNew, int nBlockHeight, CAmount blo
         voutMasternodeStr += txout.ToString();
     }
 
-    if (nBlockHeight > Params().GetConsensus().nHardForkTwo && nBlockHeight < Params().GetConsensus().nHardForkSeven ||
-        nBlockHeight >= Params().GetConsensus().nHardForkEight) {
+    if (nBlockHeight > Params().GetConsensus().nHardForkHeights[0] && nBlockHeight < Params().GetConsensus().nHardForkHeights[4] ||
+        nBlockHeight >= Params().GetConsensus().nHardForkHeights[5]) {
         CTxOut devFundTx = CTxOut();
         devFundTx.nValue = GetDevelopmentFundPayment(nBlockHeight);
         devFundTx.scriptPubKey = GetDevFundScriptPubKey(nBlockHeight);
@@ -252,11 +252,11 @@ void FillBlockPayments(CMutableTransaction& txNew, int nBlockHeight, CAmount blo
 CScript GetDevFundScriptPubKey(const int& nBlockHeight) {
     std::string strDevFundAddress;
 
-    if (nBlockHeight <= Params().GetConsensus().nHardForkThree)
+    if (nBlockHeight <= Params().GetConsensus().nHardForkHeights[1])
         strDevFundAddress = "53NTdWeAxEfVjXufpBqU2YKopyZYmN9P1V";
-    else if (nBlockHeight > Params().GetConsensus().nHardForkThree && nBlockHeight < Params().GetConsensus().nHardForkSeven)
+    else if (nBlockHeight > Params().GetConsensus().nHardForkHeights[1] && nBlockHeight < Params().GetConsensus().nHardForkHeights[4])
         strDevFundAddress = "CPhPudPYNC8uXZPCHovyTyY98Q6fJzjJLm";
-    else // the Dev Fund won't be paid until nHardForkEight is reached
+    else // the Dev Fund won't be paid until nHardForkHeights[5] is reached
         strDevFundAddress = "CKNvCGE3g3v1299oNraXnEUDBe3zwMj8E9";
 
     return GetScriptForDestination(CBitcoinAddress(strDevFundAddress.c_str()).Get());

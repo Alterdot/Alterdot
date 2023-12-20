@@ -1197,8 +1197,8 @@ UniValue registerdomain(const JSONRPCRequest& request)
     if (request.params[1].get_str().length() > 69)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, argument 2 can have at most 69 characters.");
 
-    if (chainActive.Height() + 1 < Params().GetConsensus().nHardForkEight)
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "BDNS registrations become active starting with block: " + std::to_string(Params().GetConsensus().nHardForkEight));
+    if (chainActive.Height() + 1 < Params().GetConsensus().nHardForkHeights[5])
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "BDNS registrations become active starting with block: " + std::to_string(Params().GetConsensus().nHardForkHeights[5]));
 
     std::string bdnsName = request.params[0].get_str();
     std::string content = request.params[1].get_str();
@@ -1330,8 +1330,8 @@ UniValue updatedomain(const JSONRPCRequest& request)
     if (request.params[1].get_str().length() > 69)
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, argument 2 can have at most 69 characters.");
 
-    if (chainActive.Height() + 1 < Params().GetConsensus().nHardForkEight)
-        throw JSONRPCError(RPC_INTERNAL_ERROR, "BDNS updates become active starting with block: " + std::to_string(Params().GetConsensus().nHardForkEight));
+    if (chainActive.Height() + 1 < Params().GetConsensus().nHardForkHeights[5])
+        throw JSONRPCError(RPC_INTERNAL_ERROR, "BDNS updates become active starting with block: " + std::to_string(Params().GetConsensus().nHardForkHeights[5]));
 
     std::string bdnsName = request.params[0].get_str();
     std::string newContent = request.params[1].get_str();
@@ -1440,8 +1440,8 @@ UniValue resolvedomain(const JSONRPCRequest& request) {
     if (request.params[0].isNull())
         throw JSONRPCError(RPC_INVALID_PARAMETER, "Invalid parameter, argument 1 must be non-null.");
 
-    if (chainActive.Height() + 1 < Params().GetConsensus().nHardForkEight)
-        throw JSONRPCError(RPC_MISC_ERROR, "The BDNS becomes active starting with block: " + std::to_string(Params().GetConsensus().nHardForkEight));
+    if (chainActive.Height() + 1 < Params().GetConsensus().nHardForkHeights[5])
+        throw JSONRPCError(RPC_MISC_ERROR, "The BDNS becomes active starting with block: " + std::to_string(Params().GetConsensus().nHardForkHeights[5]));
 
     std::string content;
 

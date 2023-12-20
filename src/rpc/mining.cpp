@@ -773,7 +773,7 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
         ExtractDestination(txout.scriptPubKey, address1);
         CBitcoinAddress address2(address1);
 
-        if (nNextHeight < consensusParams.nHardForkSeven || nNextHeight >= consensusParams.nHardForkEight) {
+        if (nNextHeight < consensusParams.nHardForkHeights[4] || nNextHeight >= consensusParams.nHardForkHeights[5]) {
             UniValue obj(UniValue::VOBJ);
             obj.push_back(Pair("payee", address2.ToString().c_str()));
             obj.push_back(Pair("script", HexStr(txout.scriptPubKey)));
@@ -786,15 +786,15 @@ UniValue getblocktemplate(const JSONRPCRequest& request)
     result.push_back(Pair("masternode_payments_started", pindexPrev->nHeight + 1 > consensusParams.nMasternodePaymentsStartBlock));
     result.push_back(Pair("masternode_payments_enforced", true));
 
-    if (nNextHeight > consensusParams.nHardForkTwo && nNextHeight < consensusParams.nHardForkSeven || nNextHeight >= consensusParams.nHardForkEight) {
+    if (nNextHeight > consensusParams.nHardForkHeights[0] && nNextHeight < consensusParams.nHardForkHeights[4] || nNextHeight >= consensusParams.nHardForkHeights[5]) {
         std::string strDevAddress; 
         CAmount fundReward = GetDevelopmentFundPayment(nNextHeight);
 
-        if (nNextHeight <= consensusParams.nHardForkThree)
+        if (nNextHeight <= consensusParams.nHardForkHeights[1])
             strDevAddress = "53NTdWeAxEfVjXufpBqU2YKopyZYmN9P1V";
-        else if (nNextHeight > consensusParams.nHardForkThree && nNextHeight < consensusParams.nHardForkSeven)
+        else if (nNextHeight > consensusParams.nHardForkHeights[1] && nNextHeight < consensusParams.nHardForkHeights[4])
             strDevAddress = "CPhPudPYNC8uXZPCHovyTyY98Q6fJzjJLm";
-        else // the Dev Fund won't be paid until nHardForkEight is reached
+        else // the Dev Fund won't be paid until nHardForkHeights[5] is reached
             strDevAddress = "CKNvCGE3g3v1299oNraXnEUDBe3zwMj8E9";
 
         UniValue fundRewardObj(UniValue::VOBJ);

@@ -479,11 +479,11 @@ bool CanDirectFetch(const Consensus::Params &consensusParams)
 {
     int64_t timeDifference;
 
-    if (chainActive.Tip()->nHeight > consensusParams.nHardForkSix - 20 && chainActive.Tip()->nHeight < consensusParams.nHardForkSix) {
-        int nBlocksOldTargetSpacing = consensusParams.nHardForkSix - chainActive.Tip()->nHeight;
+    if (chainActive.Tip()->nHeight > consensusParams.nHardForkHeights[3] - 20 && chainActive.Tip()->nHeight < consensusParams.nHardForkHeights[3]) {
+        int nBlocksOldTargetSpacing = consensusParams.nHardForkHeights[3] - chainActive.Tip()->nHeight;
 
         timeDifference = nBlocksOldTargetSpacing * consensusParams.GetCurrentPowTargetSpacing(1) + // after HardForkSix the target spacing changed
-                         (20 - nBlocksOldTargetSpacing) * consensusParams.GetCurrentPowTargetSpacing(consensusParams.nHardForkSix + 1);
+                         (20 - nBlocksOldTargetSpacing) * consensusParams.GetCurrentPowTargetSpacing(consensusParams.nHardForkHeights[3] + 1);
     } else
         timeDifference = consensusParams.GetCurrentPowTargetSpacing(chainActive.Tip()->nHeight) * 20;
 
@@ -1998,9 +1998,9 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             int nBlocksPastHour;
             Consensus::Params consensusParams = chainparams.GetConsensus();
 
-            if (chainActive.Tip()->nHeight > consensusParams.nHardForkSix && chainActive.Tip()->nHeight < consensusParams.nHardForkSix + 10)
-                nBlocksPastHour = (chainActive.Tip()->nHeight - consensusParams.nHardForkSix) + // after HardForkSix the target spacing increased so before it more than 10 blocks per hour were produced
-                                  (consensusParams.nHardForkSix + 10 - chainActive.Tip()->nHeight) * consensusParams.GetCurrentPowTargetSpacing(consensusParams.nHardForkSix + 1) / consensusParams.GetCurrentPowTargetSpacing(1);
+            if (chainActive.Tip()->nHeight > consensusParams.nHardForkHeights[3] && chainActive.Tip()->nHeight < consensusParams.nHardForkHeights[3] + 10)
+                nBlocksPastHour = (chainActive.Tip()->nHeight - consensusParams.nHardForkHeights[3]) + // after HardForkSix the target spacing increased so before it more than 10 blocks per hour were produced
+                                  (consensusParams.nHardForkHeights[3] + 10 - chainActive.Tip()->nHeight) * consensusParams.GetCurrentPowTargetSpacing(consensusParams.nHardForkHeights[3] + 1) / consensusParams.GetCurrentPowTargetSpacing(1);
             else
                 nBlocksPastHour = 3600 / consensusParams.GetCurrentPowTargetSpacing(chainActive.Tip()->nHeight);
             

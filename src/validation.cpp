@@ -1210,10 +1210,10 @@ CAmount GetPoWBlockPayment(const int& nHeight, CAmount nFees) {
         LogPrint("premine creation", "GetPoWBlockPayment() : create=%s Premine=%d\n", FormatMoney(nIntPoWReward), nIntPoWReward);
         return nIntPoWReward;
     }
-    else if (nHeight > 1 && nHeight <= consensusParams.nHardForkTwo)
+    else if (nHeight > 1 && nHeight <= consensusParams.nHardForkHeights[0])
         nIntPoWReward = 10 * COIN;
-    else if (nHeight > consensusParams.nHardForkTwo && nHeight < consensusParams.nHardForkSix) {
-        int nIntPhase = (nHeight - consensusParams.nHardForkTwo) / consensusParams.nIntPhaseTotalBlocks;
+    else if (nHeight > consensusParams.nHardForkHeights[0] && nHeight < consensusParams.nHardForkHeights[3]) {
+        int nIntPhase = (nHeight - consensusParams.nHardForkHeights[0]) / consensusParams.nIntPhaseTotalBlocks;
 
         switch (nIntPhase) {
             case 0: nIntPoWReward = 8 * COIN;
@@ -1227,8 +1227,8 @@ CAmount GetPoWBlockPayment(const int& nHeight, CAmount nFees) {
             case 4: nIntPoWReward = 4 * COIN;
         }
     }
-    else if (nHeight > consensusParams.nHardForkSix && nHeight < consensusParams.nHardForkSix + consensusParams.nBlocksPerYear) {
-        int nIntPhase = (nHeight - consensusParams.nHardForkSix) / (consensusParams.nBlocksPerYear / 2);
+    else if (nHeight > consensusParams.nHardForkHeights[3] && nHeight < consensusParams.nHardForkHeights[3] + consensusParams.nBlocksPerYear) {
+        int nIntPhase = (nHeight - consensusParams.nHardForkHeights[3]) / (consensusParams.nBlocksPerYear / 2);
 
         switch (nIntPhase) {
             case 0: nIntPoWReward = 6 * COIN;
@@ -1247,10 +1247,10 @@ CAmount GetMasternodePayment(const int& nHeight) {
     CAmount nIntMNReward = 0 * COIN;
     Consensus::Params consensusParams = Params().GetConsensus();
 
-    if (nHeight > consensusParams.nMasternodePaymentsStartBlock && nHeight <= consensusParams.nHardForkTwo)
+    if (nHeight > consensusParams.nMasternodePaymentsStartBlock && nHeight <= consensusParams.nHardForkHeights[0])
         nIntMNReward = 1 * COIN;
-    else if (nHeight > consensusParams.nHardForkTwo && nHeight <= consensusParams.nHardForkSix) {
-        int nIntPhase = (nHeight - consensusParams.nHardForkTwo) / consensusParams.nIntPhaseTotalBlocks;
+    else if (nHeight > consensusParams.nHardForkHeights[0] && nHeight <= consensusParams.nHardForkHeights[3]) {
+        int nIntPhase = (nHeight - consensusParams.nHardForkHeights[0]) / consensusParams.nIntPhaseTotalBlocks;
         
         switch(nIntPhase) {
             case 0: nIntMNReward = 2 * COIN;
@@ -1264,8 +1264,8 @@ CAmount GetMasternodePayment(const int& nHeight) {
             case 4: nIntMNReward = 6 * COIN;
         }
     }
-    else if (nHeight > consensusParams.nHardForkSix && nHeight < consensusParams.nHardForkSix + consensusParams.nBlocksPerYear) {
-        int nIntPhase = (nHeight - consensusParams.nHardForkSix) / (consensusParams.nBlocksPerYear / 2);
+    else if (nHeight > consensusParams.nHardForkHeights[3] && nHeight < consensusParams.nHardForkHeights[3] + consensusParams.nBlocksPerYear) {
+        int nIntPhase = (nHeight - consensusParams.nHardForkHeights[3]) / (consensusParams.nBlocksPerYear / 2);
 
         switch (nIntPhase) {
             case 0: nIntMNReward = 6 * COIN;
@@ -1276,7 +1276,7 @@ CAmount GetMasternodePayment(const int& nHeight) {
     else
         nIntMNReward = 4 * COIN;
 
-    if (nHeight >= consensusParams.nHardForkSeven && nHeight < consensusParams.nHardForkEight) // transition period, core functionalities only
+    if (nHeight >= consensusParams.nHardForkHeights[4] && nHeight < consensusParams.nHardForkHeights[5]) // transition period, core functionalities only
         nIntMNReward = 0 * COIN;
 
     LogPrint("creation", "GetMasternodePayment(): create=%s MN Payment=%d\n", FormatMoney(nIntMNReward), nIntMNReward);
@@ -1288,17 +1288,17 @@ CAmount GetDevelopmentFundPayment(const int& nHeight) {
     Consensus::Params consensusParams = Params().GetConsensus();
 
     // 0.5 ADOT reward to DevFund from 375,001 until block 1,000,000
-    if (nHeight > consensusParams.nHardForkTwo && nHeight <= consensusParams.nHardForkSix) {
+    if (nHeight > consensusParams.nHardForkHeights[0] && nHeight <= consensusParams.nHardForkHeights[3]) {
         // Temporal increase to 1 ADOT reward to DevFund from 550,001 until block 625,000
-        if (nHeight > consensusParams.nHardForkThree && nHeight <= consensusParams.nTempDevFundIncreaseEnd)
+        if (nHeight > consensusParams.nHardForkHeights[1] && nHeight <= consensusParams.nHardForkHeights[2])
             nIntDevFundReward = 1 * COIN;
         else
             nIntDevFundReward = 0.5 * COIN;
     } 
-    else if (nHeight > consensusParams.nHardForkSix)
+    else if (nHeight > consensusParams.nHardForkHeights[3])
         nIntDevFundReward = 2 * COIN;
 
-    if (nHeight >= consensusParams.nHardForkSeven && nHeight < consensusParams.nHardForkEight) // transition period, core functionalities only
+    if (nHeight >= consensusParams.nHardForkHeights[4] && nHeight < consensusParams.nHardForkHeights[5]) // transition period, core functionalities only
         nIntDevFundReward = 0 * COIN;
 
     LogPrint("creation", "GetDevelopmentFundPayment(): create=%s Dev Fund Payment=%d\n", FormatMoney(nIntDevFundReward), nIntDevFundReward);
@@ -1992,13 +1992,13 @@ bool IsFundRewardValid(const CTransaction& txNew, CAmount fundReward, const int&
     std::string strDevAddress;
     
     //Use a new Dev Fund address after HardForkEight due to wallet transaction cluttering
-    if (nHeight >= Params().GetConsensus().nHardForkEight)
+    if (nHeight >= Params().GetConsensus().nHardForkHeights[5])
         strDevAddress = "CKNvCGE3g3v1299oNraXnEUDBe3zwMj8E9";
     //Use the new Dev Fund address after HardForkThree (block 550,001)
-    else if (nHeight > Params().GetConsensus().nHardForkThree && nHeight < Params().GetConsensus().nHardForkSeven)
+    else if (nHeight > Params().GetConsensus().nHardForkHeights[1] && nHeight < Params().GetConsensus().nHardForkHeights[4])
         strDevAddress = "CPhPudPYNC8uXZPCHovyTyY98Q6fJzjJLm";
     //Use the old Dev Fund address starting from HardForkTwo until HardForkThree
-    else if (nHeight > Params().GetConsensus().nHardForkTwo && nHeight <= Params().GetConsensus().nHardForkThree)
+    else if (nHeight > Params().GetConsensus().nHardForkHeights[0] && nHeight <= Params().GetConsensus().nHardForkHeights[1])
         strDevAddress = "53NTdWeAxEfVjXufpBqU2YKopyZYmN9P1V";
     else if (txNew.vout.size() <= 2) // before HardForkTwo there should be at most 2 outgoing transanctions, PoW and MN rewards
         return true;
@@ -2144,7 +2144,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
         flags |= SCRIPT_VERIFY_CHECKSEQUENCEVERIFY;
         nLockTimeFlags |= LOCKTIME_VERIFY_SEQUENCE;
 
-    if (pindex->nHeight >= Params().GetConsensus().nHardForkEight) {
+    if (pindex->nHeight >= Params().GetConsensus().nHardForkHeights[5]) {
         flags |= SCRIPT_VERIFY_NULLDUMMY;
     }
 
@@ -3851,18 +3851,18 @@ void ReindexBdnsRecords() {
 
     {
         LOCK(cs_main);
-        if (chainActive.Height() < consensusParams.nHardForkEight) {
+        if (chainActive.Height() < consensusParams.nHardForkHeights[5]) {
             fReindexingBdns = false;
             pbdnsdb->WriteReindexing(false);
             return;
         } else {
             lastProcessedIndex = chainActive.Tip()->pprev->pprev;
-            lastProcessedHeight = std::max(consensusParams.nHardForkEight, lastProcessedIndex->nHeight);
+            lastProcessedHeight = std::max(consensusParams.nHardForkHeights[5], lastProcessedIndex->nHeight);
         }
     }
 
     // blocks are getting indexed without a lock until getting very close to the tip, if any corruption is detected the indexing stops
-    for (int i = consensusParams.nHardForkEight; i < lastProcessedHeight; i++) {
+    for (int i = consensusParams.nHardForkHeights[5]; i < lastProcessedHeight; i++) {
         boost::this_thread::interruption_point();
 
         if (!ProcessBdnsActiveHeight(i, consensusParams)) {

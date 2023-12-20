@@ -253,15 +253,13 @@ class CMainParams : public CChainParams {
 public:
     CMainParams() {
         strNetworkID = "main";
-        consensus.nHardForkOne = 250000; // block // TODO_ADOT remove unused hard forks and refactor into array
-        consensus.nHardForkTwo = 375000; // block
-        consensus.nHardForkThree = 550000; // block
-        consensus.nHardForkFour = 665000; // block
-        consensus.nHardForkFive = 850000; // block
-        consensus.nHardForkSix = 1000000; // block
-        consensus.nHardForkSeven = 1034000; // block core-mode network, LWMA switch
-        consensus.nHardForkEight = 1037000; // block Alterdot-rebase in effect, Bitcreds rejected
-        consensus.nTempDevFundIncreaseEnd = 625000; // block
+        consensus.nHardForkHeights[0] = 375000; // reward change and start of dev fund reward
+        consensus.nHardForkHeights[1] = 550000; // dev fund address and reward change
+        consensus.nHardForkHeights[2] = 625000; // dev fund reward change
+        consensus.nHardForkHeights[3] = 1000000; // PoW target spacing and reward change
+        consensus.nHardForkHeights[4] = 1034000; // core-mode network, LWMA target spacing algorithm switch
+        consensus.nHardForkHeights[5] = 1037000; // exit core-mode, Alterdot-rebase in effect, Bitcreds rejected; reactivation of MNs and Alterdot-specific functionalities, BIP147
+        consensus.nHardForkHeights[6] = 1260000; // GhostRider mining algorithm switch
         consensus.nMasternodePaymentsStartBlock = 100; // Masternode Payments begin on block 100
         consensus.nInstantSendConfirmationsRequired = 6;
         consensus.nInstantSendKeepLock = 24;

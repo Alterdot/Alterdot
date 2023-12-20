@@ -157,15 +157,7 @@ struct MasternodeCollaterals {
 struct Params {
     uint256 hashGenesisBlock;
     uint256 hashDevnetGenesisBlock;
-    int nHardForkOne; // block TODO_ADOT_FUTURE refactor hard fork heights into an array & remove unused heights
-    int nHardForkTwo; // block
-    int nHardForkThree; //block
-    int nHardForkFour; //block
-    int nHardForkFive; //block
-    int nHardForkSix; // block
-    int nHardForkSeven; // block, lite/core network mode
-    int nHardForkEight; // block, exit core mode, reactivation of MNs and Alterdot-specific functionalities, BIP147
-    int nTempDevFundIncreaseEnd; //block height for temporal Dev fund increase ending
+    int nHardForkHeights[7];
     int nSubsidyHalvingInterval;
     int nMasternodePaymentsStartBlock;
     int nInstantSendConfirmationsRequired; // in blocks
@@ -242,7 +234,7 @@ struct Params {
     uint256 defaultAssumeValid;
 
     int64_t GetCurrentPowTargetSpacing(const int& nHeight) const {
-        if (nHeight > nHardForkSix)
+        if (nHeight > nHardForkHeights[3])
             return nNewPowTargetSpacing;
         else
             return nOldPowTargetSpacing;
