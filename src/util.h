@@ -144,6 +144,8 @@ boost::filesystem::path GetConfigFile(const std::string& confPath);
 boost::filesystem::path GetPidFile();
 void CreatePidFile(const boost::filesystem::path &path, pid_t pid);
 #endif
+std::string GenerateRandomPassword();
+std::string GenerateRandomUser();
 void ReadConfigFile(const std::string& confPath);
 #ifdef WIN32
 boost::filesystem::path GetSpecialFolderPath(int nFolder, bool fCreate = true);

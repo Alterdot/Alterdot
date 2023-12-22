@@ -401,6 +401,11 @@ public:
         consensus.llmqChainLocks = Consensus::LLMQ_30_80;
         consensus.llmqForInstantSend = Consensus::LLMQ_10_60;
 
+        consensus.mnCollaterals = Consensus::MasternodeCollaterals{{
+            { 10000 * COIN, { 1040002, 1043001, 1260000 } },
+            {  2000 * COIN, { 1258000, 1260000, INT_MAX } }
+        }};
+
         fMiningRequiresPeers = true;
         fDefaultConsistencyChecks = false;
         fRequireStandard = true;
@@ -573,11 +578,6 @@ public:
         consensus.llmqs[Consensus::LLMQ_400_85] = llmq400_85;
         consensus.llmqChainLocks = Consensus::LLMQ_50_60;
         consensus.llmqForInstantSend = Consensus::LLMQ_50_60;
-        
-        consensus.mnCollaterals = Consensus::MasternodeCollaterals{{
-            { 10000 * COIN, 1260000 },
-            {  2000 * COIN, INT_MAX }
-        }};
 
         fMiningRequiresPeers = true;
         fDefaultConsistencyChecks = false;

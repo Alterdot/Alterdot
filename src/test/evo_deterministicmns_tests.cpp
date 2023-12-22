@@ -100,7 +100,7 @@ static CMutableTransaction CreateProRegTx(SimpleUTXOMap& utxos, int port, const 
     operatorKeyRet.MakeNewKey();
 
     CAmount change;
-    CAmount collateralAmount = Params().GetConsensus().mnCollaterals.getCollateral(chainActive.Height() < 0 ? 1 : chainActive.Height());
+    CAmount collateralAmount = Params().GetConsensus().mnCollaterals.getPayableCollateral(chainActive.Height() < 0 ? 1 : chainActive.Height());
     auto inputs = SelectUTXOs(utxos, collateralAmount, change);
 
     CProRegTx proTx;

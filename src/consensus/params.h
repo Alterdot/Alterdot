@@ -124,25 +124,41 @@ struct LLMQParams {
     int keepOldConnections;
 };
 
+struct CollateralHeights {
+    int regStartHeight;
+    int payStartHeight;
+    int endHeight;
+};
+
 struct MasternodeCollaterals {
-    std::map<CAmount, int> collateralHeightMap;
+    std::map<CAmount, CollateralHeights> collateralHeightsMap;
 
     bool isValidCollateral(CAmount collateralAmount) const {
-        auto it = collateralHeightMap.find(collateralAmount);
-        return it != collateralHeightMap.end();
+        auto it = collateralHeightsMap.find(collateralAmount);
+        return it != collateralHeightsMap.end();
     }
 
     bool isPayableCollateral(CAmount collateralAmount, int height) const {
-        if(!isValidCollateral(collateralAmount)) {
+        if (!isValidCollateral(collateralAmount)) {
             return false;
         }
-        int collateralEndHeight = collateralHeightMap.at(collateralAmount);
-        return collateralEndHeight == INT_MAX || height <= collateralEndHeight;
+
+        auto collateralHeights = collateralHeightsMap.at(collateralAmount);
+        return height >= collateralHeights.payStartHeight && height < collateralHeights.endHeight;
     }
 
-    CAmount getCollateral(int height) const {
-        for (auto& it : collateralHeightMap) {
-            if (it.second == INT_MAX || height <= it.second) {
+    bool isRegisterableCollateral(CAmount collateralAmount, int height) const {
+        if (!isValidCollateral(collateralAmount)) {
+            return false;
+        }
+
+        auto collateralHeights = collateralHeightsMap.at(collateralAmount);
+        return height >= collateralHeights.regStartHeight && height < collateralHeights.endHeight;
+    }
+
+    CAmount getPayableCollateral(int height) const {
+        for (auto& it : collateralHeightsMap) {
+            if (height >= it.second.payStartHeight && height < it.second.endHeight) {
                 return it.first;
             }
         }

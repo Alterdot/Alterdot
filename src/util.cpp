@@ -594,43 +594,6 @@ static boost::filesystem::path pathCached;
 static boost::filesystem::path pathCachedNetSpecific;
 static CCriticalSection csPathCached;
 
-static std::string GenerateRandomString(unsigned int len) {
-    if (len == 0){
-        len = 24;
-    }
-    srand(time(NULL) + len); //seed srand before using
-    char s[len];
-    static const char alphanum[] =
-        "0123456789"
-        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz";
-
-    for (unsigned int i = 0; i < len; ++i) {
-        s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
-    }
-    s[len] = 0;
-    std::string sPassword(s);
-    return sPassword;
-}
-
-static unsigned int RandomIntegerRange(unsigned int nMin, unsigned int nMax)
-{
-  srand(time(NULL) + nMax); //seed srand before using
-  return nMin + rand() % (nMax - nMin) + 1;
-}
-
-static void WriteConfigFile(FILE* configFile)
-{
-    fputs ("#Do not use special characters with username/password\n", configFile);
-    std::string sRPCpassword = "rpcpassword=" + GenerateRandomString(RandomIntegerRange(18, 24)) + "\n";
-    std::string sUserID = "rpcuser=" + GenerateRandomString(RandomIntegerRange(7, 11)) + "\n";
-    fputs (sUserID.c_str(), configFile);
-    fputs (sRPCpassword.c_str(), configFile);
-    fputs ("rpcport=31050\n", configFile);
-    fputs ("port=31000\n",configFile);
-    fclose(configFile);
-}
-
 const boost::filesystem::path &GetDataDir(bool fNetSpecific)
 {
     namespace fs = boost::filesystem;
@@ -686,6 +649,51 @@ boost::filesystem::path GetConfigFile(const std::string& confPath)
         pathConfigFile = GetDataDir(false) / pathConfigFile;
 
     return pathConfigFile;
+}
+
+static unsigned int RandomIntegerRange(unsigned int nMin, unsigned int nMax)
+{
+  srand(time(NULL) + nMax); //seed srand before using
+  return nMin + rand() % (nMax - nMin) + 1;
+}
+
+static std::string GenerateRandomString(unsigned int len) {
+    if (len == 0){
+        len = 24;
+    }
+    srand(time(NULL) + len); //seed srand before using
+    char s[len];
+    static const char alphanum[] =
+        "0123456789"
+        "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+        "abcdefghijklmnopqrstuvwxyz";
+
+    for (unsigned int i = 0; i < len; ++i) {
+        s[i] = alphanum[rand() % (sizeof(alphanum) - 1)];
+    }
+    s[len] = 0;
+    std::string sPassword(s);
+    return sPassword;
+}
+
+std::string GenerateRandomPassword() {
+    return GenerateRandomString(RandomIntegerRange(18, 24));
+}
+
+std::string GenerateRandomUser() {
+    return GenerateRandomString(RandomIntegerRange(7, 11));
+}
+
+static void WriteConfigFile(FILE* configFile)
+{
+    fputs ("#Do not use special characters with username/password\n", configFile);
+    std::string sRPCpassword = "rpcpassword=" + GenerateRandomPassword() + "\n";
+    std::string sUserID = "rpcuser=" + GenerateRandomUser() + "\n";
+    fputs (sUserID.c_str(), configFile);
+    fputs (sRPCpassword.c_str(), configFile);
+    fputs ("rpcport=31050\n", configFile);
+    fputs ("port=31000\n",configFile);
+    fclose(configFile);
 }
 
 void ReadConfigFile(const std::string& confPath)
