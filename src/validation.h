@@ -242,7 +242,7 @@ static const uint64_t MIN_DISK_SPACE_FOR_BLOCK_FILES = 945 * 1024 * 1024;
  * @param[out]  fNewBlock A boolean which is set to indicate if the block was first received via this call
  * @return True if state.IsValid()
  */
-bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, bool fForceProcessing, bool* fNewBlock);
+bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<const CBlock> pblock, const uint256& blockHash, bool fForceProcessing, bool* fNewBlock);
 
 /**
  * Process incoming block headers.
@@ -255,6 +255,7 @@ bool ProcessNewBlock(const CChainParams& chainparams, const std::shared_ptr<cons
  * @param[out] ppindex If set, the pointer will be set to point to the last new block index object for the given headers
  */
 bool ProcessNewBlockHeaders(const std::vector<CBlockHeader>& block, CValidationState& state, const CChainParams& chainparams, const CBlockIndex** ppindex=NULL);
+bool ProcessNewBlockHeaders(const std::vector<std::pair<CBlockHeader, uint256>>& vecHeaderHash, CValidationState& state, const CChainParams& chainparams, const CBlockIndex** ppindex);
 
 /** Check whether enough disk space is available for an incoming block */
 bool CheckDiskSpace(uint64_t nAdditionalBytes = 0);
@@ -291,7 +292,7 @@ bool GetTransaction(const uint256 &hash, CTransactionRef &tx, const Consensus::P
 /** Retrieve a transaction (from disk, used by the BlockchainDNS indexing) */
 bool GetTransaction(const uint256 &hash, CTransactionRef &tx, const Consensus::Params& params);
 /** Find the best known block, and make it the tip of the block chain */
-bool ActivateBestChain(CValidationState& state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock = std::shared_ptr<const CBlock>());
+bool ActivateBestChain(CValidationState& state, const CChainParams& chainparams, std::shared_ptr<const CBlock> pblock = std::shared_ptr<const CBlock>(), const uint256& hashBlock = uint256());
 
 double ConvertBitsToDouble(unsigned int nBits);
 CAmount GetPoWBlockPayment(const int& nHeight, CAmount nFees);
@@ -499,8 +500,8 @@ bool DisconnectBlocks(int blocks);
 void ReprocessBlocks(int nBlocks);
 
 /** Context-independent validity checks */
-bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true);
-bool CheckBlock(const CBlock& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
+bool CheckBlockHeader(const CBlockHeader& block, const uint256& blockHash, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true);
+bool CheckBlock(const CBlock& block, const uint256& blockHash, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW = true, bool fCheckMerkleRoot = true);
 
 /** Processing of BDNS-IPFS transactions*/
 bool ExtractBdnsIpfsFromScript(const CScript& scriptPubKey, std::string& dtpAddress, std::string& content);

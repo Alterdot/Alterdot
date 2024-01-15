@@ -141,7 +141,7 @@ UniValue generateBlocks(boost::shared_ptr<CReserveScript> coinbaseScript, int nG
             continue;
         }
         std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(*pblock);
-        if (!ProcessNewBlock(Params(), shared_pblock, true, NULL))
+        if (!ProcessNewBlock(Params(), shared_pblock, shared_pblock->GetHash(), true, NULL))
             throw JSONRPCError(RPC_INTERNAL_ERROR, "ProcessNewBlock, block not accepted");
         ++nHeight;
         blockHashes.push_back(pblock->GetHash().GetHex());
@@ -839,8 +839,8 @@ public:
     submitblock_StateCatcher(const uint256 &hashIn) : hash(hashIn), found(false), state() {}
 
 protected:
-    virtual void BlockChecked(const CBlock& block, const CValidationState& stateIn) override {
-        if (block.GetHash() != hash)
+    virtual void BlockChecked(const CBlock& block, const uint256& blockHash, const CValidationState& stateIn) override {
+        if (blockHash != hash)
             return;
         found = true;
         state = stateIn;
@@ -899,7 +899,7 @@ UniValue submitblock(const JSONRPCRequest& request)
 
     submitblock_StateCatcher sc(block.GetHash());
     RegisterValidationInterface(&sc);
-    bool fAccepted = ProcessNewBlock(Params(), blockptr, true, NULL);
+    bool fAccepted = ProcessNewBlock(Params(), blockptr, blockptr->GetHash(), true, NULL);
     UnregisterValidationInterface(&sc);
     if (fBlockPresent) {
         if (fAccepted && !sc.found) {

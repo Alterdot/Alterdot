@@ -605,7 +605,7 @@ static bool ProcessBlockFound(CBlock* pblock, const CChainParams& chainparams)
 
     std::shared_ptr<const CBlock> shared_pblock = std::make_shared<const CBlock>(*pblock);
     // Process this block the same as if we had received it from another node
-    if (!ProcessNewBlock(chainparams, shared_pblock, true, NULL))
+    if (!ProcessNewBlock(chainparams, shared_pblock, shared_pblock->GetHash(), true, NULL))
         return error("ProcessBlockFound -- ProcessNewBlock() failed, block not accepted");
 
     return true;

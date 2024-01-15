@@ -503,7 +503,7 @@ CDeterministicMNManager::CDeterministicMNManager(CEvoDB& _evoDb) :
 {
 }
 
-bool CDeterministicMNManager::ProcessBlock(const CBlock& block, const CBlockIndex* pindex, CValidationState& _state, bool fJustCheck)
+bool CDeterministicMNManager::ProcessBlock(const CBlock& block, const uint256& blockHash, const CBlockIndex* pindex, CValidationState& _state, bool fJustCheck)
 {
     AssertLockHeld(cs_main);
 
@@ -533,7 +533,7 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, const CBlockInde
             newList.SetHeight(nHeight);
         }
 
-        newList.SetBlockHash(block.GetHash());
+        newList.SetBlockHash(uint256(blockHash));
 
         oldList = GetListForBlock(pindex->pprev);
         diff = oldList.BuildDiff(newList);

@@ -116,7 +116,7 @@ void CQuorumBlockProcessor::ProcessMessage(CNode* pfrom, const std::string& strC
     }
 }
 
-bool CQuorumBlockProcessor::ProcessBlock(const CBlock& block, const CBlockIndex* pindex, CValidationState& state)
+bool CQuorumBlockProcessor::ProcessBlock(const CBlock& block, const uint256& blockHash, const CBlockIndex* pindex, CValidationState& state)
 {
     AssertLockHeld(cs_main);
 
@@ -126,7 +126,7 @@ bool CQuorumBlockProcessor::ProcessBlock(const CBlock& block, const CBlockIndex*
     bool fLLMQ_40_55Enabled = pindex->nHeight >= Params().GetConsensus().LLMQ_40_55StartHeight;
 
     if (!fDIP0003Active_context) {
-        evoDb.Write(DB_BEST_BLOCK_UPGRADE, block.GetHash());
+        evoDb.Write(DB_BEST_BLOCK_UPGRADE, blockHash);
         return true;
     }
 
@@ -170,8 +170,6 @@ bool CQuorumBlockProcessor::ProcessBlock(const CBlock& block, const CBlockIndex*
             return state.DoS(100, false, REJECT_INVALID, "bad-qc-missing");
         }
     }
-
-    auto blockHash = block.GetHash();
 
     for (auto& p : qcs) {
         auto& qc = p.second;

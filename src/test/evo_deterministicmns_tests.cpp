@@ -225,7 +225,7 @@ BOOST_FIXTURE_TEST_CASE(dip3_activation, TestChainDIP3BeforeActivationSetup)
 
     // We start one block before DIP3 activation, so mining a block with a DIP3 transaction should fail
     auto block = std::make_shared<CBlock>(CreateBlock(txns, coinbaseKey));
-    ProcessNewBlock(Params(), block, true, nullptr);
+    ProcessNewBlock(Params(), block, block->GetHash(), true, nullptr);
     BOOST_ASSERT(chainActive.Height() == nHeight);
     BOOST_ASSERT(block->GetHash() != chainActive.Tip()->GetBlockHash());
     BOOST_ASSERT(!deterministicMNManager->GetListAtChainTip().HasMN(tx.GetHash()));
@@ -236,7 +236,7 @@ BOOST_FIXTURE_TEST_CASE(dip3_activation, TestChainDIP3BeforeActivationSetup)
 
     // Mining a block with a DIP3 transaction should succeed now
     block = std::make_shared<CBlock>(CreateBlock(txns, coinbaseKey));
-    ProcessNewBlock(Params(), block, true, nullptr);
+    ProcessNewBlock(Params(), block, block->GetHash(), true, nullptr);
     deterministicMNManager->UpdatedBlockTip(chainActive.Tip());
     BOOST_ASSERT(chainActive.Height() == nHeight + 2);
     BOOST_ASSERT(block->GetHash() == chainActive.Tip()->GetBlockHash());

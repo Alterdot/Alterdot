@@ -46,7 +46,7 @@ static void DeserializeAndCheckBlockTest(benchmark::State& state)
         assert(stream.Rewind(sizeof(raw_bench::block813851)));
 
         CValidationState validationState;
-        assert(CheckBlock(block, validationState, params, block.GetBlockTime()));
+        assert(CheckBlock(block, block.GetHash(), validationState, params, block.GetBlockTime()));
     }
 }
 

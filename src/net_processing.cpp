@@ -926,10 +926,10 @@ void PeerLogicValidation::UpdatedBlockTip(const CBlockIndex *pindexNew, const CB
     nTimeBestReceived = GetTime();
 }
 
-void PeerLogicValidation::BlockChecked(const CBlock& block, const CValidationState& state) {
+void PeerLogicValidation::BlockChecked(const CBlock& block, const uint256& blockHash, const CValidationState& state) {
     LOCK(cs_main);
 
-    const uint256 hash(block.GetHash());
+    const uint256 hash(blockHash);
     std::map<uint256, std::pair<NodeId, bool> >::iterator it = mapBlockSource.find(hash);
 
     int nDoS = 0;
@@ -2571,7 +2571,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
                 mapBlockSource.emplace(pblock->GetHash(), std::make_pair(pfrom->GetId(), false));
             }
             bool fNewBlock = false;
-            ProcessNewBlock(chainparams, pblock, true, &fNewBlock);
+            ProcessNewBlock(chainparams, pblock, pblock->GetHash(), true, &fNewBlock);
             if (fNewBlock)
                 pfrom->nLastBlockTime = GetTime();
 
@@ -2648,7 +2648,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             bool fNewBlock = false;
             // Since we requested this block (it was in mapBlocksInFlight), force it to be processed,
             // even if it would not be a candidate for new tip (missing previous block, chain not long enough, etc)
-            ProcessNewBlock(chainparams, pblock, true, &fNewBlock);
+            ProcessNewBlock(chainparams, pblock, pblock->GetHash(), true, &fNewBlock);
             if (fNewBlock)
                 pfrom->nLastBlockTime = GetTime();
         }
@@ -2657,7 +2657,7 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
 
     else if (strCommand == NetMsgType::HEADERS && !fImporting && !fReindex) // Ignore headers received while importing
     {
-        std::vector<CBlockHeader> headers;
+        std::vector<std::pair<CBlockHeader, uint256>> vecHeaderHash;
 
         // Bypass the normal CBlock deserialization, as we don't want to risk deserializing 2000 full blocks.
         unsigned int nCount = ReadCompactSize(vRecv);
@@ -2666,9 +2666,9 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
             Misbehaving(pfrom->GetId(), 20);
             return error("headers message size = %u", nCount);
         }
-        headers.resize(nCount);
+        vecHeaderHash.resize(nCount);
         for (unsigned int n = 0; n < nCount; n++) {
-            vRecv >> headers[n];
+            vRecv >> vecHeaderHash[n].first;
             ReadCompactSize(vRecv); // ignore tx count; assume it is 0.
         }
 
@@ -2690,18 +2690,18 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         //   don't connect before giving DoS points
         // - Once a headers message is received that is valid and does connect,
         //   nUnconnectingHeaders gets reset back to 0.
-        if (mapBlockIndex.find(headers[0].hashPrevBlock) == mapBlockIndex.end() && nCount < MAX_BLOCKS_TO_ANNOUNCE) {
+        if (mapBlockIndex.find(vecHeaderHash[0].first.hashPrevBlock) == mapBlockIndex.end() && nCount < MAX_BLOCKS_TO_ANNOUNCE) {
             nodestate->nUnconnectingHeaders++;
             connman.PushMessage(pfrom, msgMaker.Make(NetMsgType::GETHEADERS, chainActive.GetLocator(pindexBestHeader), uint256()));
             LogPrint("net", "received header %s: missing prev block %s, sending getheaders (%d) to end (peer=%d, nUnconnectingHeaders=%d)\n",
-                    headers[0].GetHash().ToString(),
-                    headers[0].hashPrevBlock.ToString(),
+                    vecHeaderHash[0].first.GetHash().ToString(),
+                    vecHeaderHash[0].first.hashPrevBlock.ToString(),
                     pindexBestHeader->nHeight,
                     pfrom->id, nodestate->nUnconnectingHeaders);
             // Set hashLastUnknownBlock for this peer, so that if we
             // eventually get the headers - even from a different peer -
             // we can use this peer to download.
-            UpdateBlockAvailability(pfrom->GetId(), headers.back().GetHash());
+            UpdateBlockAvailability(pfrom->GetId(), vecHeaderHash.back().second);
 
             if (nodestate->nUnconnectingHeaders % MAX_UNCONNECTING_HEADERS == 0) {
                 Misbehaving(pfrom->GetId(), 20);
@@ -2710,17 +2710,18 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
         }
 
         uint256 hashLastBlock;
-        for (const CBlockHeader& header : headers) {
-            if (!hashLastBlock.IsNull() && header.hashPrevBlock != hashLastBlock) {
+        for (std::pair<CBlockHeader, uint256>& headerHash : vecHeaderHash) {
+            if (!hashLastBlock.IsNull() && headerHash.first.hashPrevBlock != hashLastBlock) {
                 Misbehaving(pfrom->GetId(), 20);
                 return error("non-continuous headers sequence");
             }
-            hashLastBlock = header.GetHash();
+            headerHash.second = headerHash.first.GetHash();
+            hashLastBlock = headerHash.second;
         }
         }
 
         CValidationState state;
-        if (!ProcessNewBlockHeaders(headers, state, chainparams, &pindexLast)) {
+        if (!ProcessNewBlockHeaders(vecHeaderHash, state, chainparams, &pindexLast)) {
             int nDoS;
             if (state.IsInvalid(nDoS)) {
                 if (nDoS > 0) {
@@ -2806,26 +2807,26 @@ bool static ProcessMessage(CNode* pfrom, const std::string& strCommand, CDataStr
     {
         std::shared_ptr<CBlock> pblock = std::make_shared<CBlock>();
         vRecv >> *pblock;
+        const uint256 blockHash(pblock->GetHash());
 
-        LogPrint("net", "received block %s peer=%d\n", pblock->GetHash().ToString(), pfrom->id);
+        LogPrint("net", "received block %s peer=%d\n", blockHash.ToString(), pfrom->id);
 
         // Process all blocks from whitelisted peers, even if not requested,
         // unless we're still syncing with the network.
         // Such an unrequested block may still be processed, subject to the
         // conditions in AcceptBlock().
         bool forceProcessing = pfrom->fWhitelisted && !IsInitialBlockDownload();
-        const uint256 hash(pblock->GetHash());
         {
             LOCK(cs_main);
             // Also always process if we requested the block explicitly, as we may
             // need it even though it is not a candidate for a new best tip.
-            forceProcessing |= MarkBlockAsReceived(hash);
+            forceProcessing |= MarkBlockAsReceived(blockHash);
             // mapBlockSource is only used for sending reject messages and DoS scores,
             // so the race between here and cs_main in ProcessNewBlock is fine.
-            mapBlockSource.emplace(hash, std::make_pair(pfrom->GetId(), true));
+            mapBlockSource.emplace(blockHash, std::make_pair(pfrom->GetId(), true));
         }
         bool fNewBlock = false;
-        ProcessNewBlock(chainparams, pblock, forceProcessing, &fNewBlock);
+        ProcessNewBlock(chainparams, pblock, blockHash, forceProcessing, &fNewBlock);
         if (fNewBlock)
             pfrom->nLastBlockTime = GetTime();
     }

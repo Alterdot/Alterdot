@@ -86,7 +86,7 @@ bool UndoSpecialTx(const CTransaction& tx, const CBlockIndex* pindex)
     return false;
 }
 
-bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CValidationState& state, bool fJustCheck, bool fCheckCbTxMerleRoots)
+bool ProcessSpecialTxsInBlock(const CBlock& block, const uint256& blockHash, const CBlockIndex* pindex, CValidationState& state, bool fJustCheck, bool fCheckCbTxMerleRoots)
 {
     static int64_t nTimeLoop = 0;
     static int64_t nTimeQuorum = 0;
@@ -109,14 +109,14 @@ bool ProcessSpecialTxsInBlock(const CBlock& block, const CBlockIndex* pindex, CV
     int64_t nTime2 = GetTimeMicros(); nTimeLoop += nTime2 - nTime1;
     LogPrint("bench", "        - Loop: %.2fms [%.2fs]\n", 0.001 * (nTime2 - nTime1), nTimeLoop * 0.000001);
 
-    if (!llmq::quorumBlockProcessor->ProcessBlock(block, pindex, state)) {
+    if (!llmq::quorumBlockProcessor->ProcessBlock(block, blockHash, pindex, state)) {
         return false;
     }
 
     int64_t nTime3 = GetTimeMicros(); nTimeQuorum += nTime3 - nTime2;
     LogPrint("bench", "        - quorumBlockProcessor: %.2fms [%.2fs]\n", 0.001 * (nTime3 - nTime2), nTimeQuorum * 0.000001);
 
-    if (!deterministicMNManager->ProcessBlock(block, pindex, state, fJustCheck)) {
+    if (!deterministicMNManager->ProcessBlock(block, blockHash, pindex, state, fJustCheck)) {
         return false;
     }
 
