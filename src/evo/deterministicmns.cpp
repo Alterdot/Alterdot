@@ -539,7 +539,7 @@ bool CDeterministicMNManager::ProcessBlock(const CBlock& block, const CBlockInde
             newList.SetHeight(nHeight);
         }
 
-        newList.SetBlockHash(block.GetHash());
+        newList.SetBlockHash(block.GetSavedHash());
 
         oldList = GetListForBlock(pindex->pprev);
         diff = oldList.BuildDiff(newList);

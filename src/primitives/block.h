@@ -33,6 +33,9 @@ public:
     uint32_t nBits;
     uint32_t nNonce;
 
+    mutable uint256 hash;
+    mutable bool fHashComputed = false;
+
     CBlockHeader()
     {
         SetNull();
@@ -58,11 +61,23 @@ public:
         nTime = 0;
         nBits = 0;
         nNonce = 0;
+
+        hash.SetNull();
+        fHashComputed = false;
     }
 
     bool IsNull() const
     {
         return (nBits == 0);
+    }
+
+    uint256 GetSavedHash() const {
+        if (!fHashComputed) {
+            hash = GetHash();
+            fHashComputed = true;
+        }
+
+        return hash;
     }
 
     uint256 GetHash() const
