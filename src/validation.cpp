@@ -1165,7 +1165,7 @@ bool ReadBlockFromDisk(CBlock& block, const CDiskBlockPos& pos, const Consensus:
     }
 
     // Check the header
-    if (checkHeader && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+    if (checkHeader && !CheckProofOfWork(block.GetSavedHash(), block.nBits, consensusParams))
         return error("ReadBlockFromDisk: Errors in block header at %s", pos.ToString());
 
     return true;
@@ -1175,7 +1175,7 @@ bool ReadBlockFromDisk(CBlock& block, const CBlockIndex* pindex, const Consensus
 {
     if (!ReadBlockFromDisk(block, pindex->GetBlockPos(), consensusParams))
         return false;
-    if (block.GetHash() != pindex->GetBlockHash())
+    if (block.GetSavedHash() != pindex->GetBlockHash())
         return error("ReadBlockFromDisk(CBlock&, CBlockIndex*): GetHash() doesn't match index for %s at %s",
                 pindex->ToString(), pindex->GetBlockPos().ToString());
     return true;
@@ -2021,7 +2021,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
     assert(pindex);
     // pindex->phashBlock can be null if called by CreateNewBlock/TestBlockValidity
     assert((pindex->phashBlock == NULL) ||
-           (*pindex->phashBlock == block.GetHash()));
+           (*pindex->phashBlock == block.GetSavedHash()));
     int64_t nTimeStart = GetTimeMicros();
 
     // Check it again in case a previous version let a bad block in
@@ -2048,7 +2048,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
 
     // Special case for the genesis block, skipping connection of its transactions
     // (its coinbase is unspendable)
-    if (block.GetHash() == chainparams.GetConsensus().hashGenesisBlock) {
+    if (block.GetSavedHash() == chainparams.GetConsensus().hashGenesisBlock) {
         if (!fJustCheck)
             view.SetBestBlock(pindex->GetBlockHash());
         return true;
@@ -2333,7 +2333,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
                     // The node which relayed this should switch to correct chain.
                     // TODO: relay instantsend data/proof.
                     LOCK(cs_main);
-                    mapRejectedBlocks.insert(std::make_pair(block.GetHash(), GetTime()));
+                    mapRejectedBlocks.insert(std::make_pair(block.GetSavedHash(), GetTime()));
                     return state.DoS(10, error("ConnectBlock(ADOT): transaction %s conflicts with transaction lock %s", tx->GetHash().ToString(), hashLocked.ToString()),
                                      REJECT_INVALID, "conflict-tx-lock");
                 }
@@ -2349,7 +2349,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
                 // The node which relayed this should switch to correct chain.
                 // TODO: relay instantsend data/proof.
                 LOCK(cs_main);
-                mapRejectedBlocks.insert(std::make_pair(block.GetHash(), GetTime()));
+                mapRejectedBlocks.insert(std::make_pair(block.GetSavedHash(), GetTime()));
                 return state.DoS(10, error("ConnectBlock(ADOT): transaction %s conflicts with transaction lock %s", tx->GetHash().ToString(), conflictLock->txid.ToString()),
                                  REJECT_INVALID, "conflict-tx-lock");
             }
@@ -2391,7 +2391,7 @@ static bool ConnectBlock(const CBlock& block, CValidationState& state, CBlockInd
     LogPrint("bench", "      - IsBlockValueValid: %.2fms [%.2fs]\n", 0.001 * (nTime5_3 - nTime5_2), nTimeValueValid * 0.000001);
 
     if (!IsBlockPayeeValid(*block.vtx[0], pindex->nHeight, nExpectedBlockValue)) {
-        mapRejectedBlocks.insert(std::make_pair(block.GetHash(), GetTime()));
+        mapRejectedBlocks.insert(std::make_pair(block.GetSavedHash(), GetTime()));
         return state.DoS(0, error("ConnectBlock(ADOT): couldn't find Masternode or Superblock payments"),
                                 REJECT_INVALID, "bad-cb-payee");
     }
@@ -3053,7 +3053,7 @@ bool ActivateBestChain(CValidationState &state, const CChainParams& chainparams,
 
             bool fInvalidFound = false;
             std::shared_ptr<const CBlock> nullBlockPtr;
-            if (!ActivateBestChainStep(state, chainparams, pindexMostWork, pblock && pblock->GetHash() == pindexMostWork->GetBlockHash() ? pblock : nullBlockPtr, fInvalidFound, connectTrace))
+            if (!ActivateBestChainStep(state, chainparams, pindexMostWork, pblock && pblock->GetSavedHash() == pindexMostWork->GetBlockHash() ? pblock : nullBlockPtr, fInvalidFound, connectTrace))
                 return false;
 
             if (fInvalidFound) {
@@ -3214,7 +3214,7 @@ bool ResetBlockFailureFlags(CBlockIndex *pindex) {
 CBlockIndex* AddToBlockIndex(const CBlockHeader& block, enum BlockStatus nStatus = BLOCK_VALID_TREE)
 {
     // Check for duplicate
-    uint256 hash = block.GetHash();
+    uint256 hash(block.GetSavedHash());
     BlockMap::iterator it = mapBlockIndex.find(hash);
     if (it != mapBlockIndex.end())
         return it->second;
@@ -3393,13 +3393,13 @@ bool FindUndoPos(CValidationState &state, int nFile, CDiskBlockPos &pos, unsigne
 bool CheckBlockHeader(const CBlockHeader& block, CValidationState& state, const Consensus::Params& consensusParams, bool fCheckPOW)
 {
     // Check proof of work matches claimed amount
-    if (fCheckPOW && !CheckProofOfWork(block.GetHash(), block.nBits, consensusParams))
+    if (fCheckPOW && !CheckProofOfWork(block.GetSavedHash(), block.nBits, consensusParams))
         return state.DoS(50, false, REJECT_INVALID, "high-hash", false, "proof of work failed");
 
     // Check DevNet
     if (!consensusParams.hashDevnetGenesisBlock.IsNull() &&
             block.hashPrevBlock == consensusParams.hashGenesisBlock &&
-            block.GetHash() != consensusParams.hashDevnetGenesisBlock) {
+            block.GetSavedHash() != consensusParams.hashDevnetGenesisBlock) {
         return state.DoS(100, error("CheckBlockHeader(): wrong devnet genesis"),
                          REJECT_INVALID, "devnet-genesis");
     }
@@ -3774,7 +3774,7 @@ void ProcessBdnsTransactions(const CBlock& block, const CBlockIndex& pindex, con
 void ProcessExpiredBdnsRecords(const CBlockIndex* pblockindex, const Consensus::Params& consensusParams) {
     CBlock block;
 
-    if (!ReadBlockFromDisk(block, pblockindex->GetBlockPos(), consensusParams)) {
+    if (!ReadBlockFromDisk(block, pblockindex->GetBlockPos(), consensusParams, false)) {
         pbdnsdb->WriteCorruptionState(true);
         LogPrint("bdns", "BlockchainDNS -- %s: failed to read block from disk\n", __func__);
         return;
@@ -3895,7 +3895,7 @@ static bool AcceptBlockHeader(const CBlockHeader& block, CValidationState& state
 {
     AssertLockHeld(cs_main);
     // Check for duplicate
-    uint256 hash = block.GetHash();
+    uint256 hash(block.GetSavedHash());
     BlockMap::iterator miSelf = mapBlockIndex.find(hash);
     CBlockIndex *pindex = NULL;
 
