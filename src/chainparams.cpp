@@ -402,7 +402,9 @@ public:
         consensus.llmqForInstantSend = Consensus::LLMQ_10_60;
 
         consensus.mnCollaterals = Consensus::MasternodeCollaterals{{
-            { 10000 * COIN, { 1040002, 1043001, 1260000 } },
+            { 10000 * COIN, { 1040002, 1040002, 1260000 } },
+            // Deterministic MNs actually started being paid after DIP3 enforcement height (1043000),
+            // but the system considers them as valid and paid since 1040002, that is how Dash enabled the DetMN system as well
             {  2000 * COIN, { 1258000, 1260000, INT_MAX } }
         }};
 
