@@ -853,6 +853,22 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
         }
     }
 
+    if (Params().GetConsensus().mnCollaterals.getEndedCollateral(nHeight) != 0) {
+        CAmount removedCollateralAmount = Params().GetConsensus().mnCollaterals.getEndedCollateral(nHeight);
+
+        std::vector<uint256> removedList;
+        newList.ForEachMN(false, [&](const CDeterministicMNCPtr& dmn) {
+            if (dmn->pdmnState->nCollateralAmount == removedCollateralAmount) {
+                removedList.push_back(dmn->proTxHash);
+            }
+        });
+
+        // removing while iterating can cause unexpected behaviour (such as last removed MN appearing twice in the iteration, but it was already removed)
+        for (const auto& proTxHash : removedList) {
+            newList.RemoveMN(proTxHash);
+        }
+    }
+
     // The payee for the current block was determined by the previous block's list but it might have disappeared in the
     // current block. We still pay that MN one last time however.
     if (payee && newList.HasMN(payee->proTxHash)) {

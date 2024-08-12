@@ -165,6 +165,16 @@ struct MasternodeCollaterals {
 
         return 0;
     }
+
+    CAmount getEndedCollateral(int height) const {
+        for (auto& it : collateralHeightsMap) {
+            if (height == it.second.endHeight) {
+                return it.first;
+            }
+        }
+
+        return 0;
+    }
 };
 
 /**
