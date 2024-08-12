@@ -288,6 +288,10 @@ public:
     // critical section to protect the inner data structures
     mutable CCriticalSection cs;
 
+    // must be true for the collateral amount field update
+    // since the Dump operation initializes a new CGovernanceManager and reads the unupdated version on disk
+    bool addCollateralAmount = true;
+
     CGovernanceManager();
 
     virtual ~CGovernanceManager() {}
@@ -357,7 +361,11 @@ public:
         READWRITE(cmmapOrphanVotes);
         READWRITE(mapObjects);
         READWRITE(mapLastMasternodeObject);
-        READWRITE(lastMNListForVotingKeys);
+        if (addCollateralAmount && ser_action.ForRead()) {
+            lastMNListForVotingKeys.Unserialize(s, true);
+        } else {
+            READWRITE(lastMNListForVotingKeys);
+        }
     }
 
     void UpdatedBlockTip(const CBlockIndex* pindex, CConnman& connman);

@@ -20,6 +20,8 @@
 
 static const std::string DB_LIST_SNAPSHOT = "dmn_S";
 static const std::string DB_LIST_DIFF = "dmn_D";
+static const std::string DB_COLLATERAL_UPGRADED = "dmn_col_uped";
+static const std::string DB_COLLATERAL_UPGRADING = "dmn_col_uping";
 
 CDeterministicMNManager* deterministicMNManager;
 
@@ -713,7 +715,7 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
 
             if (proTx.collateralOutpoint.hash.IsNull()) {
                 dmnState.nCollateralAmount = tx.vout[proTx.collateralOutpoint.n].nValue;
-            } else{
+            } else {
                 dmnState.nCollateralAmount = coin.out.nValue;   
             }
 
@@ -848,6 +850,22 @@ bool CDeterministicMNManager::BuildNewListFromBlock(const CBlock& block, const C
                               __func__, dmn->proTxHash.ToString(), dmn->collateralOutpoint.ToStringShort(), nHeight, newList.GetAllMNsCount());
                 }
             }
+        }
+    }
+
+    if (Params().GetConsensus().mnCollaterals.getEndedCollateral(nHeight) != 0) {
+        CAmount removedCollateralAmount = Params().GetConsensus().mnCollaterals.getEndedCollateral(nHeight);
+
+        std::vector<uint256> removedList;
+        newList.ForEachMN(false, [&](const CDeterministicMNCPtr& dmn) {
+            if (dmn->pdmnState->nCollateralAmount == removedCollateralAmount) {
+                removedList.push_back(dmn->proTxHash);
+            }
+        });
+
+        // removing while iterating can cause unexpected behaviour (such as last removed MN appearing twice in the iteration, but it was already removed)
+        for (const auto& proTxHash : removedList) {
+            newList.RemoveMN(proTxHash);
         }
     }
 
@@ -1005,7 +1023,7 @@ void CDeterministicMNManager::CleanupCache(int nHeight)
     }
 }
 
-bool CDeterministicMNManager::UpgradeDiff(CDBBatch& batch, const CBlockIndex* pindexNext, const CDeterministicMNList& curMNList, CDeterministicMNList& newMNList)
+void CDeterministicMNManager::UpgradeDiff(CDBBatch& batch, const CBlockIndex* pindexNext, const CDeterministicMNList& curMNList, CDeterministicMNList& newMNList)
 {
     CDataStream oldDiffData(SER_DISK, CLIENT_VERSION);
     if (!evoDb.GetRawDB().ReadDataStream(std::make_pair(DB_LIST_DIFF, pindexNext->GetBlockHash()), oldDiffData)) {
@@ -1013,7 +1031,7 @@ bool CDeterministicMNManager::UpgradeDiff(CDBBatch& batch, const CBlockIndex* pi
         newMNList = curMNList;
         newMNList.SetBlockHash(pindexNext->GetBlockHash());
         newMNList.SetHeight(pindexNext->nHeight);
-        return false;
+        return;
     }
 
     CDeterministicMNListDiff_OldFormat oldDiff;
@@ -1050,20 +1068,20 @@ bool CDeterministicMNManager::UpgradeDiff(CDBBatch& batch, const CBlockIndex* pi
 
     batch.Write(std::make_pair(DB_LIST_DIFF, pindexNext->GetBlockHash()), newDiff);
 
-    return true;
+    return;
 }
 
 // TODO this can be completely removed in a future version
-void CDeterministicMNManager::UpgradeDBIfNeeded()
+bool CDeterministicMNManager::UpgradeDBIfNeeded()
 {
     LOCK(cs_main);
 
     if (chainActive.Tip() == nullptr) {
-        return;
+        return true;
     }
 
     if (evoDb.GetRawDB().Exists(EVODB_BEST_BLOCK)) {
-        return;
+        return true;
     }
 
     // Removing the old EVODB_BEST_BLOCK value early results in older version to crash immediately, even if the upgrade
@@ -1071,6 +1089,7 @@ void CDeterministicMNManager::UpgradeDBIfNeeded()
     // then we must assume that the upgrade process was already running before but was interrupted.
     if (chainActive.Height() > 1 && !evoDb.GetRawDB().Exists(std::string("b_b"))) {
         LogPrintf("CDeterministicMNManager::%s -- ERROR, upgrade process was interrupted and can't be continued. You need to reindex now.\n", __func__);
+        return false;
     }
     evoDb.GetRawDB().Erase(std::string("b_b"));
 
@@ -1079,7 +1098,7 @@ void CDeterministicMNManager::UpgradeDBIfNeeded()
         auto dbTx = evoDb.BeginTransaction();
         evoDb.WriteBestBlock(chainActive.Tip()->GetBlockHash());
         dbTx->Commit();
-        return;
+        return true;
     }
 
     LogPrintf("CDeterministicMNManager::%s -- upgrading DB to use compact diffs\n", __func__);
@@ -1115,4 +1134,107 @@ void CDeterministicMNManager::UpgradeDBIfNeeded()
     dbTx->Commit();
 
     evoDb.GetRawDB().CompactFull();
+
+    return true;
+}
+
+void CDeterministicMNManager::UpgradeCollateral(CDBBatch& batch, const CBlockIndex* pindexNext, const CDeterministicMNList& curMNList, CDeterministicMNList& newMNList) {
+    CDataStream oldDiffData(SER_DISK, CLIENT_VERSION);
+    if (!evoDb.GetRawDB().ReadDataStream(std::make_pair(DB_LIST_DIFF, pindexNext->GetBlockHash()), oldDiffData)) {
+        LogPrintf("CDeterministicMNManager::%s -- no diff found for %s\n", __func__, pindexNext->GetBlockHash().ToString());
+        newMNList = curMNList;
+        newMNList.SetBlockHash(pindexNext->GetBlockHash());
+        newMNList.SetHeight(pindexNext->nHeight);
+        return;
+    }
+
+    CDeterministicMNListDiff oldDiff, newDiff;
+    oldDiff.Unserialize(oldDiffData, false);
+
+    for (auto& p : oldDiff.addedMNs) {
+        auto pdmnState = std::make_shared<CDeterministicMNState>(*p->pdmnState);
+        pdmnState->nCollateralAmount = 10000 * COIN;
+        auto dmnState = std::make_shared<CDeterministicMN>(*p);
+        dmnState->pdmnState = pdmnState;
+        newDiff.addedMNs.emplace_back(dmnState);
+    }
+
+    newDiff.removedMns = oldDiff.removedMns;
+
+    // applies added/removed MNs
+    newMNList = curMNList.ApplyDiff(pindexNext, newDiff);
+
+    // manually apply updated MNs and calc new state diffs
+    for (auto& p : oldDiff.updatedMNs) {
+        auto oldMN = newMNList.GetMNByInternalId(p.first);
+        newMNList.UpdateMN(oldMN, p.second);
+        auto newMN = newMNList.GetMNByInternalId(p.first);
+        assert(oldMN && newMN);
+
+        newDiff.updatedMNs.emplace(std::piecewise_construct,
+                std::forward_as_tuple(oldMN->internalId),
+                std::forward_as_tuple(*oldMN->pdmnState, *newMN->pdmnState));
+    }
+
+    batch.Write(std::make_pair(DB_LIST_DIFF, pindexNext->GetBlockHash()), newDiff);
+
+    return;
+}
+
+bool CDeterministicMNManager::UpgradeDBCollateral()
+{
+    LOCK(cs_main);
+
+    if (evoDb.GetRawDB().Exists(DB_COLLATERAL_UPGRADING)) {
+        LogPrintf("CDeterministicMNManager::%s -- ERROR, upgrade process was interrupted and can't be continued. You need to reindex now.\n", __func__);
+        return false;
+    } else {
+        LogPrintf("CDeterministicMNManager::%s -- upgrading DB to include collateral amount\n", __func__);
+        evoDb.GetRawDB().Write(DB_COLLATERAL_UPGRADING, true);
+    }
+
+    if (chainActive.Height() < Params().GetConsensus().DIP0003Height) {
+        // not reached DIP3 height yet, so no upgrade needed
+        evoDb.GetRawDB().Write(DB_COLLATERAL_UPGRADED, true);
+        return true;
+    }
+
+    CDBBatch batch(evoDb.GetRawDB());
+
+    CDeterministicMNList curMNList;
+    curMNList.SetHeight(Params().GetConsensus().DIP0003Height - 1);
+    curMNList.SetBlockHash(chainActive[Params().GetConsensus().DIP0003Height - 1]->GetBlockHash());
+
+    for (int nHeight = Params().GetConsensus().DIP0003Height; nHeight <= chainActive.Height(); nHeight++) {
+        auto pindex = chainActive[nHeight];
+
+        CDeterministicMNList newMNList;
+        UpgradeCollateral(batch, pindex, curMNList, newMNList);
+
+        if ((nHeight % SNAPSHOT_LIST_PERIOD) == 0) {
+            batch.Write(std::make_pair(DB_LIST_SNAPSHOT, pindex->GetBlockHash()), newMNList);
+            evoDb.GetRawDB().WriteBatch(batch);
+            batch.Clear();
+        }
+
+        curMNList = newMNList;
+    }
+
+    evoDb.GetRawDB().WriteBatch(batch);
+    evoDb.GetRawDB().Write(DB_COLLATERAL_UPGRADED, true);
+    LogPrintf("CDeterministicMNManager::%s -- done upgrading\n", __func__);
+
+    auto dbTx = evoDb.BeginTransaction();
+    evoDb.WriteBestBlock(chainActive.Tip()->GetBlockHash());
+    dbTx->Commit();
+
+    evoDb.GetRawDB().CompactFull();
+
+    return true;
+}
+
+
+bool CDeterministicMNManager::IsCollateralUpgraded()
+{
+    return evoDb.GetRawDB().Exists(DB_COLLATERAL_UPGRADED);
 }

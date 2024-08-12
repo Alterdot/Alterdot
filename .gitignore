@@ -2,7 +2,7 @@
 *.sublime-workspace
 todo.txt
 reset-files.bash
-.vscode/settings.json
+.vscode/
 
 *.tar.gz
 

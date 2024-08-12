@@ -1762,6 +1762,7 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
 
     bool fLoaded = false;
     int64_t nStart = GetTimeMillis();
+    bool isCollateralUpgraded = false;
 
     while (!fLoaded && !fRequestShutdown) {
         bool fReset = fReindex;
@@ -1837,7 +1838,16 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
                     break;
                 }
 
-                deterministicMNManager->UpgradeDBIfNeeded();
+                if (!deterministicMNManager->UpgradeDBIfNeeded()) {
+                    strLoadError = _("Error upgrading evo database");
+                    break;
+                }
+
+                isCollateralUpgraded = deterministicMNManager->IsCollateralUpgraded();
+                if (!isCollateralUpgraded && !deterministicMNManager->UpgradeDBCollateral()) {
+                    strLoadError = _("Error upgrading evo database collateral");
+                    break;
+                }
 
                 uiInterface.InitMessage(_("Verifying blocks..."));
                 if (fHavePruned && GetArg("-checkblocks", DEFAULT_CHECKBLOCKS) > MIN_BLOCKS_TO_KEEP) {
@@ -2036,6 +2046,7 @@ bool AppInitMain(boost::thread_group& threadGroup, CScheduler& scheduler)
             return InitError(_("Failed to load masternode cache from") + "\n" + (pathDB / strDBName).string());
         }
 
+        governance.addCollateralAmount = !isCollateralUpgraded;
         strDBName = "governance.dat";
         uiInterface.InitMessage(_("Loading governance cache..."));
         CFlatDB<CGovernanceManager> flatdb3(strDBName, "magicGovernanceCache");
