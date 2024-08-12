@@ -288,6 +288,8 @@ public:
     // critical section to protect the inner data structures
     mutable CCriticalSection cs;
 
+    bool addCollateralAmount = true;
+
     CGovernanceManager();
 
     virtual ~CGovernanceManager() {}
@@ -357,7 +359,11 @@ public:
         READWRITE(cmmapOrphanVotes);
         READWRITE(mapObjects);
         READWRITE(mapLastMasternodeObject);
-        READWRITE(lastMNListForVotingKeys);
+        if (addCollateralAmount && ser_action.ForRead()) {
+            lastMNListForVotingKeys.Unserialize(s, true);
+        } else {
+            READWRITE(lastMNListForVotingKeys);
+        }
     }
 
     void UpdatedBlockTip(const CBlockIndex* pindex, CConnman& connman);

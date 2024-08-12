@@ -68,10 +68,18 @@ public:
         s >> *this;
     }
 
-    ADD_SERIALIZE_METHODS;
+    template<typename Stream>
+    void Serialize(Stream& s) const {
+        NCONST_PTR(this)->SerializationOp(s, CSerActionSerialize());
+    }
+
+    template<typename Stream>
+    void Unserialize(Stream& s, bool includeCollateralAmount = true) {
+        SerializationOp(s, CSerActionUnserialize(), includeCollateralAmount);
+    }
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action)
+    inline void SerializationOp(Stream& s, Operation ser_action, bool includeCollateralAmount = true)
     {
         READWRITE(nRegisteredHeight);
         READWRITE(nLastPaidHeight);
@@ -87,7 +95,9 @@ public:
         READWRITE(addr);
         READWRITE(scriptPayout);
         READWRITE(scriptOperatorPayout);
-        READWRITE(nCollateralAmount);
+        if (includeCollateralAmount) {
+            READWRITE(nCollateralAmount);
+        }
     }
 
     void ResetOperatorFields()
@@ -171,13 +181,21 @@ public:
 #undef DMN_STATE_DIFF_LINE
     }
 
-    ADD_SERIALIZE_METHODS;
+    template<typename Stream>
+    void Serialize(Stream& s) const {
+        NCONST_PTR(this)->SerializationOp(s, CSerActionSerialize());
+    }
+
+    template<typename Stream>
+    void Unserialize(Stream& s, bool includeCollateralAmount = true) {
+        SerializationOp(s, CSerActionUnserialize(), includeCollateralAmount);
+    }
 
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action)
+    inline void SerializationOp(Stream& s, Operation ser_action, bool includeCollateralAmount = true)
     {
         READWRITE(VARINT(fields));
-#define DMN_STATE_DIFF_LINE(f) if (fields & Field_##f) READWRITE(state.f);
+#define DMN_STATE_DIFF_LINE(f) if (fields & Field_##f && (Field_##f != Field_nCollateralAmount || includeCollateralAmount)) READWRITE(state.f);
         DMN_STATE_DIFF_ALL_FIELDS
 #undef DMN_STATE_DIFF_LINE
     }
@@ -208,7 +226,7 @@ public:
 
 public:
     template <typename Stream, typename Operation>
-    inline void SerializationOp(Stream& s, Operation ser_action, bool oldFormat)
+    inline void SerializationOp(Stream& s, Operation ser_action, bool oldFormat, bool includeCollateralAmount = true)
     {
         READWRITE(proTxHash);
         if (!oldFormat) {
@@ -216,7 +234,13 @@ public:
         }
         READWRITE(collateralOutpoint);
         READWRITE(nOperatorReward);
-        READWRITE(pdmnState);
+        if (ser_action.ForRead() && !includeCollateralAmount) {
+            CDeterministicMNState pdmnStateNew;
+            pdmnStateNew.SerializationOp(s, ser_action, false);
+            pdmnState = std::make_shared<const CDeterministicMNState>(pdmnStateNew);
+        } else {
+            READWRITE(pdmnState);
+        }
     }
 
     template<typename Stream>
@@ -226,9 +250,9 @@ public:
     }
 
     template<typename Stream>
-    void Unserialize(Stream& s, bool oldFormat = false)
+    void Unserialize(Stream& s, bool oldFormat = false, bool includeCollateralAmount = true)
     {
-        SerializationOp(s, CSerActionUnserialize(), oldFormat);
+        SerializationOp(s, CSerActionUnserialize(), oldFormat, includeCollateralAmount);
     }
 
 public:
@@ -322,7 +346,7 @@ public:
     }
 
     template<typename Stream>
-    void Unserialize(Stream& s) {
+    void Unserialize(Stream& s, bool addCollateralAmount = false) {
         mnMap = MnMap();
         mnUniquePropertyMap = MnUniquePropertyMap();
         mnInternalIdMap = MnInternalIdMap();
@@ -331,7 +355,16 @@ public:
 
         size_t cnt = ReadCompactSize(s);
         for (size_t i = 0; i < cnt; i++) {
-            AddMN(std::make_shared<CDeterministicMN>(deserialize, s));
+            if (addCollateralAmount) {
+                CDeterministicMN dmn;
+                dmn.Unserialize(s, false, false);
+                CDeterministicMNState dmnState = *dmn.pdmnState;
+                dmnState.nCollateralAmount = 10000 * COIN;
+                dmn.pdmnState = std::make_shared<CDeterministicMNState>(dmnState);
+                AddMN(std::make_shared<CDeterministicMN>(dmn));
+            } else {
+                AddMN(std::make_shared<CDeterministicMN>(deserialize, s));
+            }
         }
     }
 
@@ -579,19 +612,24 @@ public:
     }
 
     template<typename Stream>
-    void Unserialize(Stream& s)
+    void Unserialize(Stream& s, bool includeCollateralAmount = true)
     {
         updatedMNs.clear();
         removedMns.clear();
 
         size_t tmp;
         uint64_t tmp2;
-        s >> addedMNs;
+        tmp = ReadCompactSize(s);
+        for (size_t i = 0; i < tmp; i++) {
+            CDeterministicMN dmn;
+            dmn.Unserialize(s, false, includeCollateralAmount);
+            addedMNs.emplace_back(std::make_shared<CDeterministicMN>(dmn));
+        }
         tmp = ReadCompactSize(s);
         for (size_t i = 0; i < tmp; i++) {
             CDeterministicMNStateDiff diff;
             tmp2 = ReadVarInt<Stream, uint64_t>(s);
-            s >> diff;
+            diff.Unserialize(s, includeCollateralAmount);
             updatedMNs.emplace(tmp2, std::move(diff));
         }
         tmp = ReadCompactSize(s);
@@ -631,7 +669,7 @@ public:
             uint256 proTxHash;
             auto dmn = std::make_shared<CDeterministicMN>();
             s >> proTxHash;
-            dmn->Unserialize(s, true);
+            dmn->Unserialize(s, true, false);
             addedMNs.emplace(proTxHash, dmn);
         }
         s >> updatedMNs;
@@ -676,8 +714,11 @@ public:
 
 public:
     // TODO these can all be removed in a future version
-    bool UpgradeDiff(CDBBatch& batch, const CBlockIndex* pindexNext, const CDeterministicMNList& curMNList, CDeterministicMNList& newMNList);
-    void UpgradeDBIfNeeded();
+    void UpgradeDiff(CDBBatch& batch, const CBlockIndex* pindexNext, const CDeterministicMNList& curMNList, CDeterministicMNList& newMNList);
+    bool UpgradeDBIfNeeded();
+    void UpgradeCollateral(CDBBatch& batch, const CBlockIndex* pindexNext, const CDeterministicMNList& curMNList, CDeterministicMNList& newMNList);
+    bool UpgradeDBCollateral();
+    bool IsCollateralUpgraded();
 
 private:
     void CleanupCache(int nHeight);

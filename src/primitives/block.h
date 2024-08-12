@@ -13,7 +13,7 @@
 #include "utilstrencodings.h"
 
 const uint32_t nArgon2d16kAlgoSwitchTime = 1612029600; // January 30th 2021 18:00:00 GMT
-const uint32_t nGhostRiderAlgoSwitchTime = 1706637600; // January 30th 2024 18:00:00 GMT
+const uint32_t nGhostRiderAlgoSwitchTime = 1727719200; // September 30th 2024 18:00:00 GMT
 
 /** Nodes collect new transactions into a block, hash them into a hash tree,
  * and scan through nonce values to make the block's hash satisfy proof-of-work
