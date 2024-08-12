@@ -288,6 +288,8 @@ public:
     // critical section to protect the inner data structures
     mutable CCriticalSection cs;
 
+    // must be true for the collateral amount field update
+    // since the Dump operation initializes a new CGovernanceManager and reads the unupdated version on disk
     bool addCollateralAmount = true;
 
     CGovernanceManager();
